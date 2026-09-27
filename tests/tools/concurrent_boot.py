@@ -35,11 +35,13 @@ import os
 import queue
 import sys
 import time
+import traceback
 import uuid
 
 HANG_DUMP_SECONDS = 75
 BARRIER_TIMEOUT = 90
 OVERALL_TIMEOUT = 120
+EXIT_TIMEOUT = 30
 
 
 def _worker(index: int, url: str, schema: str, barrier: "multiprocessing.Barrier", out_queue: "multiprocessing.Queue") -> None:
@@ -64,8 +66,8 @@ def _worker(index: int, url: str, schema: str, barrier: "multiprocessing.Barrier
         bl.watch()(lambda: 1)()  # exercise the storage path, not just construction
         stage("used")
         out_queue.put(("ok", index, os.getpid()))
-    except BaseException as exc:  # pragma: no cover - failure path under test
-        out_queue.put(("error", index, f"pid={os.getpid()}: {exc!r}"))
+    except BaseException:  # pragma: no cover - failure path under test
+        out_queue.put(("error", index, f"pid={os.getpid()}\n{traceback.format_exc()}"))
     finally:
         faulthandler.cancel_dump_traceback_later()
 
@@ -112,14 +114,16 @@ def main(workers: int = 8) -> int:
             final[message[1]] = message
 
     missing = [i for i in range(workers) if i not in final]
-    for i in missing:
-        procs[i].join(timeout=1)
     errors = [m for m in final.values() if m[0] == "error"]
 
+    # Let every worker exit on its own first; a process that is still running after EXIT_TIMEOUT is stuck.
+    exit_deadline = time.monotonic() + EXIT_TIMEOUT
     for p in procs:
-        if p.is_alive():
-            p.terminate()
-        p.join(timeout=10)
+        p.join(timeout=max(0.0, exit_deadline - time.monotonic()))
+    still_running = [i for i, p in enumerate(procs) if p.is_alive()]
+    for i in still_running:
+        procs[i].terminate()
+        procs[i].join(timeout=10)
 
     import sqlalchemy as sa
 
@@ -132,7 +136,15 @@ def main(workers: int = 8) -> int:
     for m in errors:
         print(f" - worker {m[1]}: {m[2]}")
     for i in missing:
-        print(f" - worker {i} never reported: last stage = {last_stage.get(i, 'none (never started)')}, exit code = {procs[i].exitcode}")
+        state = "was still running and was stopped" if i in still_running else f"exited with code {procs[i].exitcode}"
+        print(f" - worker {i} never reported: last stage = {last_stage.get(i, 'none (never started)')}, {state}")
+    # Only a worker that never reported, or that reported an error, fails the check. These are warnings:
+    for i in range(workers):
+        if i in final and final[i][0] == "ok":
+            if i in still_running:
+                print(f" - warning: worker {i} reported ok but did not exit within {EXIT_TIMEOUT} s")
+            elif procs[i].exitcode not in (0, None):
+                print(f" - warning: worker {i} reported ok but exited with code {procs[i].exitcode}")
     return 1 if (errors or missing) else 0
 
 
