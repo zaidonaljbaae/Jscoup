@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+recursive-include jscoup/dashboard/static *.html
+include SECURITY_UPGRADE.md
+include NOTICE
+include TRADEMARK.md
+include CHANGELOG.md
+include CITATION.cff
+include SECURITY.md

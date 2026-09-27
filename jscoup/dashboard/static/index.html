@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JSCoup — __JSCOUP_SERVICE__</title>
+<meta name="application-name" content="JSCoup">
+<style>
+:root{
+  --ink:#1A1B1E; --panel:#232428; --panel-2:#2B2C31; --line:#37383E; --line-soft:#2E2F34;
+  --fg:#ECEDEF; --muted:#ABADB8; --dim:#868893;
+  --brand:#7DA2FF; --sky:#38BDF8; --err:#F0696C; --warn:#F0B429; --ok:#3FCB86; --info:#7DA2FF; --db:#A594F9;
+  --action-bg:#ECEDEF; --action-fg:#15161A;
+  --console-bg:#18191C; --console-fg:#E4E4E7; --selection:#33405E;
+  --db-line:#3A3560; --warn-line:#4A3A18; --info-line:#2C3A5C; --ok-line:#1E4A34; --err-line:#4A2426;
+  --mono: Consolas, "Courier New", monospace;
+  --sans: Arial, Helvetica, sans-serif;
+  --r:10px; --r-sm:7px;
+  --shadow: 0 1px 2px rgba(0,0,0,.24), 0 10px 28px -8px rgba(0,0,0,.45);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+  --get:#3FCB86; --post:#7DA2FF; --put:#38BDF8; --patch:#A594F9; --delete:#F0696C;
+  --onbrand:#0B1220; --console-accent:#8FB3FF;
+  --letter-j:#ECEDEF; --letter-p:#FFFFFF;
+}
+:root[data-theme="light"]{
+  --ink:#EBF0FA; --panel:#FFFFFF; --panel-2:#E4EAF8; --line:#CBD6ED; --line-soft:#DCE4F5;
+  --fg:#10131C; --muted:#333A54; --dim:#4F567A;
+  --brand:#2952D6; --sky:#0284C7; --err:#DC2626; --warn:#C2670A; --ok:#0E9A5B; --info:#2952D6; --db:#6A45D6;
+  --action-bg:#1A1B1E; --action-fg:#FFFFFF;
+  --console-bg:#E9EEFA; --console-fg:#161A24; --selection:#C6D6FC;
+  --db-line:#DCD4FA; --warn-line:#F7E4C6; --info-line:#D8E2FC; --ok-line:#C9F0DE; --err-line:#FAD4D2;
+  --get:#0E9A5B; --post:#2952D6; --put:#0E7FB0; --patch:#6A45D6; --delete:#DC2626;
+  --onbrand:#FFFFFF; --console-accent:#2952D6;
+  --letter-j:#10131C; --letter-p:#8A8F9E;
+  --shadow: 0 1px 2px rgba(20,30,60,.06), 0 10px 28px -10px rgba(20,30,60,.16);
+  --shadow-sm: 0 1px 2px rgba(20,30,60,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--ink);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+p{font-weight:500}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+::selection{background:var(--selection)}
+button{transition:background-color .15s ease, border-color .15s ease, color .15s ease, filter .15s ease, transform .1s ease}
+
+/* ---------- shell ---------- */
+.shell{display:grid;grid-template-columns:212px 1fr;min-height:100vh}
+.rail{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:18px 18px 14px;border-bottom:1px solid var(--line)}
+.brand h1{margin:0;font-family:var(--sans);font-size:19px;letter-spacing:-.01em;font-weight:800}
+.brand h1 .l-j{color:var(--letter-j)}
+.brand h1 .l-s{color:var(--ok)}
+.brand h1 .l-c{color:var(--err)}
+.brand h1 .l-o{color:var(--warn)}
+.brand h1 .l-u{color:var(--brand)}
+.brand h1 .l-p{color:var(--letter-p)}
+.brand .meta{font-family:var(--sans);font-size:11.5px;color:var(--dim);margin-top:6px}
+.nav{padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;padding:11px 12px;border-radius:var(--r);color:var(--muted);cursor:pointer;font-family:var(--sans);font-size:13.5px;font-weight:700}
+.nav button:hover{background:var(--panel-2);color:var(--fg)}
+.nav button[aria-current="true"]{background:var(--panel-2);color:var(--fg);box-shadow:inset 2px 0 0 var(--brand)}
+.nav button[hidden]{display:none}
+.nav .count{font-size:11px;color:var(--dim);font-weight:500}
+.rail-foot{margin-top:auto;padding:12px 14px;border-top:1px solid var(--line);font-family:var(--sans);font-size:11.5px;color:var(--dim);display:flex;flex-direction:column;gap:6px}
+.rail-foot button{background:none;border:1px solid var(--line);border-radius:var(--r);padding:9px;color:var(--muted);cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:700}
+.rail-foot button:hover{border-color:var(--brand);color:var(--brand)}
+
+.main{min-width:0;display:flex;flex-direction:column}
+
+/* ---------- trace strip (signature) ---------- */
+.strip{border-bottom:1px solid var(--line);background:linear-gradient(180deg, color-mix(in srgb, var(--brand) 22%, var(--ink)), var(--ink));padding:12px 22px 8px}
+.strip-head{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--sans);font-size:12px;color:var(--dim)}
+.strip-head b{color:var(--fg);font-weight:700}
+.trace{display:flex;align-items:flex-end;gap:1px;height:46px;margin-top:8px}
+.trace i{flex:1;min-width:2px;background:var(--line-soft);border-radius:1px 1px 0 0;transition:height .25s ease, background .2s;position:relative}
+.trace i[data-k="error"]{background:var(--err)}
+.trace i[data-k="slow"]{background:var(--warn)}
+.trace i[data-k="ok"]{background:var(--line-soft)}
+.trace i:hover{background:var(--fg)}
+.axis{display:flex;justify-content:space-between;font-family:var(--sans);font-size:10.5px;color:var(--dim);margin-top:4px}
+
+/* ---------- content ---------- */
+.view{padding:22px;flex:1;min-width:0}
+.view.hidden{display:none}
+h2.section{font-family:var(--sans);font-size:13.5px;color:var(--fg);margin:0 0 12px;font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:22px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow-sm);transition:transform .15s ease, box-shadow .15s ease}
+.tile:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.tile .k{font-family:var(--sans);font-size:11.5px;color:var(--dim);font-weight:500}
+.tile .v{font-family:var(--mono);font-size:26px;margin-top:6px;letter-spacing:-.02em}
+.tile.err .v{color:var(--err)} .tile.warn .v{color:var(--warn)} .tile.ok .v{color:var(--ok)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid2.access-grid{grid-template-columns:.85fr 1.4fr}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow-sm)}
+.bar-row{display:grid;grid-template-columns:130px 1fr 42px;align-items:center;gap:10px;margin-bottom:7px;font-family:var(--sans);font-size:12.5px}
+.bar-row .track{height:6px;background:var(--line-soft);border-radius:3px;overflow:hidden}
+.bar-row .fill{height:100%;background:var(--err)}
+.bar-row .n{text-align:right;color:var(--muted);font-family:var(--mono)}
+.bar-row .label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+
+/* ---------- filters + table ---------- */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.filters input,.filters select{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;font-family:var(--sans);font-size:12.5px;outline:none}
+.filters input:focus,.filters select:focus{border-color:var(--info)}
+.filters input[type=search]{min-width:230px}
+table{width:100%;border-collapse:collapse}
+thead th{font-family:var(--sans);font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--dim);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:600}
+tbody tr{border-bottom:1px solid var(--line-soft);cursor:pointer}
+tbody tr:hover{background:var(--panel-2)}
+tbody td{padding:9px 10px;font-size:12.5px;vertical-align:top}
+td.mono,th.mono{font-family:var(--mono)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.dot.error{background:var(--err)} .dot.slow{background:var(--warn)} .dot.ok{background:var(--ok)}
+.tag{font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.database{color:var(--db);border-color:var(--db-line)} .tag.data_shape{color:var(--warn);border-color:var(--warn-line)}
+.tag.network{color:var(--info);border-color:var(--info-line)} .tag.performance{color:var(--warn);border-color:var(--warn-line)}
+.tag.validation{color:var(--ok);border-color:var(--ok-line)} .tag.auth{color:var(--info);border-color:var(--info-line)}
+.tag.access{color:var(--err);border-color:var(--err-line)}
+.truncate{max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{padding:44px 20px;text-align:center;color:var(--dim);font-family:var(--sans);font-size:13px}
+.empty b{display:block;color:var(--muted);margin-bottom:6px;font-size:13.5px;font-weight:700}
+
+/* ---------- detail ---------- */
+.drawer{position:fixed;inset:0 0 0 auto;width:min(760px,100%);background:var(--ink);border-left:1px solid var(--line);overflow-y:auto;transform:translateX(100%);transition:transform .18s ease;z-index:30;box-shadow:-20px 0 60px rgba(0,0,0,.5)}
+.drawer.open{transform:none}
+.drawer-head{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:14px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;z-index:2}
+.drawer-head h3{margin:0;font-size:15px}
+.drawer-head .sub{font-family:var(--sans);font-size:12px;color:var(--dim);margin-top:4px}
+.drawer-body{padding:18px}
+.x{background:none;border:1px solid var(--line);border-radius:var(--r);color:var(--muted);cursor:pointer;padding:4px 9px;font-family:var(--sans);font-size:12.5px}
+.x:hover{color:var(--brand);border-color:var(--brand)}
+.diag{border-left:2px solid var(--err);background:var(--panel);padding:14px 16px;border-radius:0 var(--r) var(--r) 0;margin-bottom:16px}
+.diag h4{margin:0 0 4px;font-size:14.5px}
+.diag p{margin:0 0 10px;color:var(--muted);font-size:13px}
+.diag ul{margin:4px 0 12px;padding-left:18px;color:var(--muted);font-size:12.5px}
+.diag li{margin-bottom:4px}
+.diag .lbl{font-family:var(--sans);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);font-weight:600}
+pre{background:var(--console-bg);color:var(--console-fg);border:1px solid var(--line);border-radius:var(--r);padding:12px;overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.6;margin:0}
+pre.sql{color:var(--console-accent);white-space:pre-wrap;word-break:break-word}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;font-size:12.5px;margin-bottom:16px}
+.kv dt{color:var(--dim);font-family:var(--sans);font-weight:500} .kv dd{margin:0;word-break:break-all;font-family:var(--mono)}
+.q{border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.q header{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;background:var(--panel);font-family:var(--sans);font-size:11.5px;color:var(--dim)}
+.q.failed{border-color:var(--err)} .q.failed header{color:var(--err)}
+.q pre{border:0;border-radius:0}
+details{margin-bottom:14px}
+summary{cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--dim);padding:6px 0}
+summary:hover{color:var(--fg)}
+
+/* ---------- live tester ---------- */
+.lab{display:grid;grid-template-columns:minmax(400px,38%) 1fr;gap:14px}
+@media(max-width:900px){.lab{grid-template-columns:1fr}}
+.targets{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);max-height:calc(100vh - 130px);min-height:60vh;overflow-y:auto}
+.form label{display:block;font-family:var(--sans);font-size:12.5px;font-weight:700;color:var(--dim);margin:14px 0 6px}
+.form input,.form textarea,.form select{width:100%;background:var(--console-bg);color:var(--console-fg);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-family:var(--mono);font-size:13px;outline:none}
+.form input:focus,.form textarea:focus,.form select:focus{border-color:var(--info)}
+.form textarea{min-height:110px;resize:vertical}
+.run{margin-top:16px;background:var(--action-bg);border:0;border-radius:var(--r-sm);color:var(--action-fg);font-family:var(--sans);font-size:13.5px;font-weight:700;padding:12px 22px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.12), 0 6px 16px -8px rgba(0,0,0,.35)}
+.run:hover{filter:brightness(1.08);transform:translateY(-1px)} .run:active{transform:translateY(0)} .run:disabled{opacity:.5;cursor:wait;transform:none}
+.btn-sm{background:none;border:1px solid var(--line);border-radius:var(--r-sm);color:var(--muted);cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:700;padding:8px 14px}
+.btn-sm:hover{border-color:var(--brand);color:var(--brand)}
+.btn-sm.danger:hover{border-color:var(--err);color:var(--err)}
+.row-actions{display:flex;gap:8px;flex-wrap:nowrap}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;flex-shrink:0;background:none;border:1px solid var(--line);border-radius:var(--r-sm);color:var(--muted);cursor:pointer;padding:0}
+.icon-btn:hover{border-color:var(--brand);color:var(--brand);background:var(--panel-2)}
+.icon-btn.danger:hover{border-color:var(--err);color:var(--err)}
+.icon-btn svg{width:17px;height:17px;display:block}
+.result{margin-top:16px}
+.result .status{font-family:var(--sans);font-size:12.5px;font-weight:600;margin-bottom:8px}
+.link{background:none;border:0;color:var(--info);font-family:var(--sans);font-size:12.5px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);padding:9px 16px;font-family:var(--sans);font-size:12.5px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60;box-shadow:var(--shadow)}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+@media(max-width:760px){.shell{grid-template-columns:1fr}.rail{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center}.nav{flex-direction:row;flex-wrap:wrap}.rail-foot{margin:0;border:0}}
+
+/* ---------- login ---------- */
+.login-overlay{position:fixed;inset:0;background:rgba(4,10,18,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:80}
+.login-overlay.show{display:flex}
+.modal-overlay{position:fixed;inset:0;background:rgba(4,10,18,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:85}
+.modal-overlay.show{display:flex}
+.modal-card{background:var(--panel);border:1px solid var(--line);border-radius:calc(var(--r) + 4px);padding:26px 28px;width:min(380px,90vw);box-shadow:var(--shadow)}
+.modal-card h3{margin:0 0 10px;font-size:16px}
+.modal-card .modal-body{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5}
+.modal-card.wide{width:min(1000px,96vw);max-height:88vh;overflow-y:auto}
+.modal-card.wide h3{font-size:19px;margin:0 0 4px}
+.modal-card.wide .modal-sub{color:var(--dim);font-size:12.5px;font-weight:600;margin:0 0 18px}
+.modal-card.wide .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
+.modal-card.wide .modal-grid>.span2{grid-column:1/-1}
+
+/* ---------- API picker rows (Publish a group / edit-group modal) ---------- */
+.api-row{border:1px solid var(--line);border-radius:var(--r);padding:9px 12px;margin-bottom:6px;background:var(--panel)}
+.api-row-main{display:flex;align-items:center;gap:10px}
+.api-row-main label{display:flex;align-items:center;gap:9px;flex:1;min-width:0;font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--fg);cursor:pointer;margin:0}
+.api-row-main label span.path{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.api-row-meta{display:flex;align-items:center;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line-soft)}
+.api-row-meta .field-label{font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);flex-shrink:0}
+.api-row-meta input.category-input{flex:1;min-width:0;max-width:220px;font-family:var(--mono);font-size:12px;padding:6px 9px;background:var(--console-bg);color:var(--console-fg);border:1px solid var(--line);border-radius:var(--r-sm)}
+.api-row-meta input.category-input:focus{border-color:var(--info)}
+.api-row-meta .desc{color:var(--dim);font-size:11.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.api-row-meta .link{flex-shrink:0}
+.run.danger{background:var(--err)}
+.login-card{background:var(--panel);border:1px solid var(--line);border-radius:calc(var(--r) + 4px);padding:28px 30px;width:min(320px,90vw);box-shadow:var(--shadow)}
+.login-card h2{margin:0 0 4px;font-size:18px;font-weight:800}
+.login-card p{margin:0 0 18px;color:var(--dim);font-family:var(--sans);font-size:12.5px}
+.login-card label{display:block;font-family:var(--sans);font-size:12.5px;font-weight:700;color:var(--dim);margin:12px 0 5px}
+.login-card input{width:100%;background:var(--panel-2);color:var(--fg);border:1px solid var(--line);border-radius:var(--r);padding:11px 12px;font-family:var(--sans);font-size:14px;outline:none}
+.login-card input:focus{border-color:var(--info)}
+.login-card .run{width:100%;margin-top:18px;padding:13px 22px;font-size:14px}
+.login-error{color:var(--err);font-family:var(--sans);font-size:12px;font-weight:500;margin-top:10px;min-height:14px}
+
+/* ---------- swagger-style live tester ---------- */
+.targets{padding:6px}
+.picker-box{height:min(52vh,520px);overflow-y:auto;border:1px solid var(--line);border-radius:var(--r);padding:10px;margin-top:4px;background:var(--panel)}
+.picker-box.tall{height:min(58vh,600px)}
+.picker-bar{position:sticky;top:-10px;z-index:2;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);padding:6px 0 10px;margin-bottom:4px;border-bottom:1px solid var(--line)}
+.picker-bar input[type=search]{flex:1;min-width:160px}
+.picker-bar .cnt{color:var(--muted);font-size:12.5px;font-weight:700;white-space:nowrap}
+.tag-head-row{display:flex;gap:6px;align-items:stretch;margin-bottom:3px}
+.tag-head-row .tag-header{margin-bottom:0;flex:1}
+.tag-head-row .btn-sm{white-space:nowrap}
+.picker-box .api-row-main label{padding:5px 0;font-size:13px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:14px;background:var(--panel)}
+.seg button{border:0;background:transparent;color:var(--muted);font-family:var(--sans);font-weight:700;font-size:13.5px;padding:10px 20px;cursor:pointer}
+.seg button[aria-pressed=true]{background:#2563eb;color:#fff}
+.tokenbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:14px}
+.tokenbar .tb-title{font-weight:800;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.tokenbar .tb-input{flex:1;min-width:240px;display:flex;gap:6px}
+.tokenbar input{flex:1;background:var(--console-bg);color:var(--console-fg);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-family:var(--mono);font-size:13px;outline:none}
+.tokenbar input:focus{border-color:var(--info)}
+.tokenbar .tb-state{font-size:12.5px;font-weight:700}
+.tokenbar .tb-state.ok{color:var(--ok)}
+.tokenbar .tb-state.warn{color:var(--warn)}
+.tokenbar .tb-hint{flex-basis:100%;color:var(--muted);font-size:12.5px}
+.lab-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.lab-need{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;border-radius:999px;padding:3px 10px;border:1px solid var(--line)}
+.lab-need.open{color:var(--ok)}
+.lab-need.locked{color:var(--warn)}
+.lab-need.blocked{color:var(--err);border-color:var(--err)}
+.filebox{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.filebox .fname{font-size:12.5px;color:var(--muted)}
+.filebox img{max-height:64px;max-width:120px;border:1px solid var(--line);border-radius:6px}
+.resp-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--sans);font-size:13px;font-weight:800;border-radius:999px;padding:5px 12px;border:1px solid var(--line);background:var(--panel-2)}
+.chip.ok{color:var(--ok);border-color:var(--ok)}
+.chip.bad{color:var(--err);border-color:var(--err)}
+.chip.info{color:var(--muted);font-weight:700}
+.resp-tools{margin-left:auto;display:flex;gap:6px}
+.resp-body{margin:0;max-height:60vh;overflow:auto;white-space:pre-wrap;word-break:break-word;background:var(--console-bg);color:var(--console-fg);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;font-family:var(--mono);font-size:12.5px;line-height:1.5}
+.resp-frame{width:100%;height:60vh;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+.api-row.compact{padding:6px 10px;margin-bottom:4px}
+.api-row-main input.category-input{flex:none;width:min(260px,38%);font-family:var(--mono);font-size:12px;padding:6px 9px;background:var(--console-bg);color:var(--console-fg);border:1px solid var(--line);border-radius:var(--r-sm)}
+.api-row-main input.category-input:focus,.desc-input:focus{border-color:var(--info)}
+.desc-input{width:100%;margin-top:6px;font-family:var(--sans);font-size:12.5px;padding:7px 10px;background:var(--console-bg);color:var(--console-fg);border:1px solid var(--line);border-radius:var(--r-sm)}
+.picker-box.full{height:min(66vh,760px)}
+.fields-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 16px}
+.card-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:6px}
+.card-head .section{margin:0}
+.linkcell{display:flex;flex-direction:column;gap:4px;font-size:11.5px}
+.linkcell .lk{display:flex;gap:6px;align-items:center}
+.linkcell code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;display:inline-block}
+.tag-group{margin-bottom:4px}
+.tag-header{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;cursor:pointer;font-family:var(--sans);font-size:13.5px;font-weight:700;text-transform:none;letter-spacing:0;color:var(--fg);margin-bottom:3px}
+.tag-header .n{color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0}
+.tag-header .arrow{transition:transform .15s ease}
+.tag-group.collapsed .tag-header .arrow{transform:rotate(-90deg)}
+.tag-group.collapsed .tag-body{display:none}
+.op-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line-soft);padding:10px 12px;cursor:pointer;border-radius:var(--r)}
+.op-row:hover{background:var(--panel-2)}
+.op-row[aria-current="true"]{background:var(--panel-2);box-shadow:inset 2px 0 0 var(--info)}
+.op-row .p{font-family:var(--mono);font-size:13px;word-break:break-all;color:var(--muted)}
+.op-row .lock{color:var(--warn);margin-left:auto;flex-shrink:0}
+.mbadge{display:inline-block;flex-shrink:0;width:52px;text-align:center;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:3px 0;border-radius:2px;color:var(--onbrand)}
+.mbadge.get{background:var(--get)} .mbadge.post{background:var(--post)}
+.mbadge.put{background:var(--put)} .mbadge.patch{background:var(--patch)}
+.mbadge.delete{background:var(--delete)} .mbadge.call{background:var(--muted)}
+.op-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.op-head .path{font-family:var(--mono);font-size:15px;word-break:break-all}
+.url-line{display:flex;align-items:center;gap:8px;margin-top:8px;padding:7px 10px;background:var(--console-bg);border:1px solid var(--line);border-radius:var(--r-sm)}
+.url-line code{color:var(--console-fg);font-size:12px;word-break:break-all;flex:1}
+.op-desc{color:var(--muted);font-family:var(--sans);font-size:13px;margin-bottom:14px}
+.op-desc.full{white-space:pre-wrap;font-size:13px;margin-top:2px}
+.ptable{width:100%;border-collapse:collapse;margin-bottom:6px}
+.ptable th{font-family:var(--sans);font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--dim);text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);font-weight:600}
+.ptable td{padding:7px 8px;vertical-align:top;border-bottom:1px solid var(--line-soft)}
+.ptable .pname{font-family:var(--mono);font-size:12px}
+.ptable .pname .req{color:var(--err);margin-left:3px}
+.ptable .ploc{font-family:var(--sans);font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.02em;font-weight:500}
+.ptable .ptype{font-family:var(--mono);font-size:11px;color:var(--db)}
+.ptable .pdesc{color:var(--muted);font-size:12px}
+.ptable input{width:100%;min-width:140px;background:var(--console-bg);color:var(--console-fg);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;font-family:var(--mono);font-size:12px;outline:none}
+.ptable input:focus{border-color:var(--info)}
+.theme-toggle{display:flex;align-items:center;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">
+      <h1><span class="l-j">J</span><span class="l-s">S</span><span class="l-c">C</span><span class="l-o">O</span><span class="l-u">U</span><span class="l-p">P</span></h1>
+      <div class="meta">__JSCOUP_SERVICE__ · __JSCOUP_ENV__</div>
+      <div class="meta" id="gw-user-meta" hidden></div>
+    </div>
+    <nav class="nav">
+      <button data-view="overview" aria-current="true">Overview</button>
+      <button data-view="events">Events <span class="count" id="nav-events"></span></button>
+      <button data-view="issues">Issues <span class="count" id="nav-issues"></span></button>
+      <button data-view="lab"><span id="nav-lab-label">Live tester</span> <span class="count" id="nav-targets"></span></button>
+      <button data-view="audit">Code audit</button>
+      <button data-view="checkapis">Check APIs</button>
+      <button data-view="access" id="nav-btn-access" hidden>Access &amp; public docs <span class="count" id="nav-gateway-users"></span></button>
+      <button data-view="docgroups" id="nav-btn-docgroups" hidden aria-hidden="true" tabindex="-1" style="display:none"><span class="count" id="nav-docgroups"></span></button>
+    </nav>
+    <div class="rail-foot">
+      <div id="foot-info">connecting…</div>
+      <button id="btn-theme">Light mode</button>
+      <button id="btn-refresh">Refresh now</button>
+      <button id="btn-logout">Log out</button>
+      <button id="btn-purge">Clear events</button>
+      <div id="rail-watermark" style="text-align:center;padding-top:4px;opacity:.7">JSCoup</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="strip">
+      <div class="strip-head">
+        <span>Last hour · <b id="strip-total">0</b> events</span>
+        <span id="strip-live">auto-refresh 5s</span>
+      </div>
+      <div class="trace" id="trace"></div>
+      <div class="axis"><span>-60 min</span><span>-30 min</span><span>now</span></div>
+    </section>
+
+    <!-- overview -->
+    <section class="view" id="view-overview">
+      <div class="tiles" id="tiles"></div>
+      <div class="card" style="margin-bottom:14px" id="calls-card">
+        <h2 class="section">All API calls</h2>
+        <p id="calls-summary" style="color:var(--muted);font-size:12.5px;margin:0 0 12px"></p>
+        <table>
+          <thead><tr><th class="mono">API</th><th class="mono">calls</th><th class="mono">succeeded</th><th class="mono">failed</th><th class="mono">avg ms</th><th class="mono">last call</th></tr></thead>
+          <tbody id="calls-body"></tbody>
+        </table>
+        <div id="calls-empty"></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h2 class="section">Failures by category</h2><div id="by-category"></div></div>
+        <div class="card"><h2 class="section">Failing endpoints</h2><div id="by-endpoint"></div></div>
+        <div class="card"><h2 class="section">Affected callers</h2><div id="by-actor"></div></div>
+        <div class="card"><h2 class="section">Latest failures</h2><div id="latest"></div></div>
+      </div>
+    </section>
+
+    <!-- events -->
+    <section class="view hidden" id="view-events">
+      <div class="filters">
+        <input type="search" id="f-search" placeholder="search path, error, caller…">
+        <select id="f-source" title="Which records to list"><option value="events">failures &amp; slow (detailed)</option><option value="calls">every call</option></select>
+        <select id="f-status"><option value="">any status</option><option value="error">error</option><option value="slow">slow</option><option value="ok">ok</option></select>
+        <select id="f-category"><option value="">any category</option></select>
+        <select id="f-kind"><option value="">any kind</option><option value="http">http</option><option value="service">service</option><option value="lambda">lambda</option><option value="azure_function">azure function</option><option value="oci_function">oci function</option><option value="task">task</option></select>
+        <select id="f-window"><option value="">all time</option><option value="900">15 min</option><option value="3600">1 hour</option><option value="86400">24 hours</option></select>
+      </div>
+      <table>
+        <thead><tr>
+          <th class="mono">when</th><th class="mono">operation</th><th class="mono">diagnosis</th>
+          <th class="mono">caller</th><th class="mono">sql</th><th class="mono">ms</th>
+        </tr></thead>
+        <tbody id="events-body"></tbody>
+      </table>
+      <div id="events-empty"></div>
+      <table id="calls-table" hidden>
+        <thead><tr><th class="mono">when</th><th class="mono">API</th><th class="mono">status</th><th class="mono">result</th><th class="mono">caller</th><th class="mono">ms</th><th class="mono">return</th></tr></thead>
+        <tbody id="calls-list-body"></tbody>
+      </table>
+    </section>
+
+    <!-- issues -->
+    <section class="view hidden" id="view-issues">
+      <table>
+        <thead><tr><th class="mono">count</th><th class="mono">error</th><th class="mono">operation</th><th class="mono">callers</th><th class="mono">last seen</th></tr></thead>
+        <tbody id="issues-body"></tbody>
+      </table>
+      <div id="issues-empty"></div>
+    </section>
+
+    <!-- live tester -->
+    <section class="view hidden" id="view-lab">
+      <div class="tokenbar" id="tokenbar">
+        <div class="tb-title">&#128273; Token for protected APIs</div>
+        <div class="tb-input">
+          <input id="lab-token" type="password" autocomplete="off" placeholder="Paste the token once — it is used for every API marked &#128274;">
+          <button type="button" class="btn-sm" id="lab-token-show">Show</button>
+          <button type="button" class="btn-sm" id="lab-token-clear">Clear</button>
+        </div>
+        <span class="tb-state" id="lab-token-state"></span>
+        <div class="tb-hint" id="lab-token-hint">APIs whose source code requires a token cannot be run without one. Open APIs never need it.</div>
+      </div>
+      <div class="lab">
+        <div>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <button class="run" id="btn-export-postman" style="flex:1;margin:0">Export Postman</button>
+          </div>
+          <div class="targets" id="targets"></div>
+        </div>
+        <div class="card">
+          <h2 class="section" id="lab-title">Pick an endpoint or service</h2>
+          <div class="form" id="lab-form"></div>
+          <div class="result" id="lab-result"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- code audit -->
+    <section class="view hidden" id="view-audit">
+      <div class="card">
+        <h2 class="section">Naming, style &amp; route audit</h2>
+        <div class="form">
+          <label>Paths <span style="color:var(--dim)">· one per line, files or directories — blank scans the server's working directory</span></label>
+          <textarea id="audit-paths" placeholder="(optional)"></textarea>
+          <button class="run" id="audit-run">Run audit</button>
+        </div>
+        <table style="margin-top:16px">
+          <thead><tr><th class="mono">where</th><th class="mono">kind</th><th class="mono">message</th><th class="mono">suggestion</th></tr></thead>
+          <tbody id="audit-body"></tbody>
+        </table>
+        <div id="audit-empty"></div>
+      </div>
+    </section>
+
+    <!-- check every API at once -->
+    <section class="view hidden" id="view-checkapis">
+      <div class="card">
+        <h2 class="section">Check every API</h2>
+        <div class="diag" style="border-left-color:var(--ok)">
+          <div class="lbl">This never writes or deletes anything</div>
+          <p style="margin:6px 0 0">Only an API a developer explicitly opted in with <code class="mono">healthcheck_allowed=True</code> is ever called here — everything else is skipped and reported as "not marked healthcheck_allowed". Nothing is called just because it showed up in the catalogue, and this can never save, update, or delete real data on its own.</p>
+        </div>
+        <div class="form">
+          <label>token <span style="color:var(--dim)">· applied to every protected target, optional</span></label>
+          <input id="checkapis-token" placeholder="bearer token">
+          <button class="run" id="checkapis-run">Run all</button>
+        </div>
+        <div id="checkapis-summary" style="margin:14px 0;font-family:var(--sans);font-size:12.5px;color:var(--muted)"></div>
+        <table>
+          <thead><tr><th class="mono">status</th><th class="mono">method</th><th class="mono">target</th><th class="mono">response / reason</th></tr></thead>
+          <tbody id="checkapis-body"></tbody>
+        </table>
+        <div id="checkapis-empty"></div>
+      </div>
+    </section>
+
+    <!-- API gateway: users, permissions, public targets -->
+    <section class="view hidden" id="view-access">
+      <div class="seg" role="group" aria-label="Choose what to manage">
+        <button type="button" data-seg="access" aria-pressed="true">Users &amp; tokens</button>
+        <button type="button" data-seg="docgroups" aria-pressed="false">Public docs</button>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2 class="section">Create a private user</h2>
+          <button type="button" class="run" id="gw-open-users" style="margin:0">Users &amp; access links <span class="count" id="gw-users-count">0</span></button>
+        </div>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 6px">Private users log in with a username and password (token valid 1 hour) and only see the APIs you tick below — each under the category you give it. Use the edit icon in <b>Users &amp; access links</b> to change APIs, categories and descriptions later.</p>
+        <div class="form fields-row">
+          <div><label>Label</label><input id="gw-label" placeholder="e.g. Partner Integration"></div>
+          <div><label>Username</label><input id="gw-username" placeholder="e.g. partner-integration"></div>
+          <div><label>Password</label><input id="gw-password" type="password" placeholder="the user logs in with this"></div>
+          <div><label>Allowed IPs <span style="color:var(--dim)">· one per line · blank = any</span></label>
+            <div style="display:flex;gap:8px;align-items:flex-start">
+              <textarea id="gw-allowed-ips" placeholder="(optional)" style="min-height:44px;flex:1"></textarea>
+              <button type="button" class="btn-sm" id="gw-use-my-ip" style="white-space:nowrap;margin-top:1px">Use my IP</button>
+            </div></div>
+        </div>
+        <div class="form">
+          <label>APIs this user can call <span style="color:var(--dim)">· none ticked = every API · type a category to group them</span></label>
+          <div id="gw-target-picker" class="picker-box full"></div>
+          <div class="row-actions" style="margin-top:14px"><button class="run" id="gw-create-run" style="margin-top:0">Create user</button></div>
+        </div>
+        <div id="gw-created" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h2 class="section">API catalogue</h2>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 12px">Every API discovered from the app, plus any added manually below. Removing one here only hides it from the gateway and the live tester — the real route in your app is unaffected.</p>
+        <div class="form" style="display:grid;grid-template-columns:100px 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:16px">
+          <div><label style="margin:0 0 5px">Method</label>
+            <select id="cat-method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select>
+          </div>
+          <div><label style="margin:0 0 5px">Path</label><input id="cat-path" placeholder="/partner/orders"></div>
+          <div><label style="margin:0 0 5px">Description <span style="color:var(--dim)">· optional</span></label><input id="cat-desc" placeholder="What this API does"></div>
+          <button class="run" id="cat-add-run" style="margin-top:0">Add API</button>
+        </div>
+        <table>
+          <thead><tr><th class="mono">method</th><th class="mono">path / name</th><th class="mono">source</th><th class="mono">status</th><th class="mono">health</th><th class="mono"></th></tr></thead>
+          <tbody id="cat-body"></tbody>
+        </table>
+        <div id="cat-empty"></div>
+      </div>
+    </section>
+
+    <!-- public API-doc groups: curated, no-login pages at /<slug> -->
+    <section class="view hidden" id="view-docgroups">
+      <div class="seg" role="group" aria-label="Choose what to manage">
+        <button type="button" data-seg="access" aria-pressed="false">Users &amp; tokens</button>
+        <button type="button" data-seg="docgroups" aria-pressed="true">Public docs</button>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2 class="section">Publish a public group</h2>
+          <button type="button" class="run" id="dg-open-groups" style="margin:0">Groups &amp; public links <span class="count" id="dg-groups-count">0</span></button>
+        </div>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 6px">A no-login page listing exactly the APIs you tick, at <code class="mono">__JSCOUP_MOUNT__/&lt;slug&gt;</code>, gated only by the IPs below (or open to everyone). Use the edit icon in <b>Groups &amp; public links</b> to change APIs, categories and descriptions later.</p>
+        <div class="form fields-row">
+          <div><label>Slug <span style="color:var(--dim)">· becomes the URL</span></label><input id="dg-slug" placeholder="e.g. partners"></div>
+          <div><label>Title</label><input id="dg-title" placeholder="e.g. Partner Integration APIs"></div>
+          <div><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dg-public-all" style="width:auto"> Public to everyone (0.0.0.0)</label>
+            <div style="display:flex;gap:8px;align-items:flex-start;margin-top:6px">
+              <textarea id="dg-allowed-ips" placeholder="Allowed IPs, one per line" style="min-height:44px;flex:1"></textarea>
+              <button type="button" class="btn-sm" id="dg-use-my-ip" style="white-space:nowrap;margin-top:1px">Use my IP</button>
+            </div></div>
+        </div>
+        <div class="form">
+          <label>APIs in this group <span style="color:var(--dim)">· type a category to group them</span></label>
+          <div id="dg-target-picker" class="picker-box full"></div>
+          <div class="row-actions" style="margin-top:14px"><button class="run" id="dg-create-run" style="margin-top:0">Publish group</button></div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>
+
+<div class="drawer" id="drawer" role="dialog" aria-label="Event detail">
+  <div class="drawer-head">
+    <div><h3 id="d-title">—</h3><div class="sub" id="d-sub"></div></div>
+    <button class="x" id="d-close">close</button>
+  </div>
+  <div class="drawer-body" id="d-body"></div>
+</div>
+<div class="toast" id="toast"></div>
+<datalist id="known-categories-list"></datalist>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-card" id="modal-card"></div>
+</div>
+
+<div class="login-overlay" id="login-overlay">
+  <form class="login-card" id="login-form">
+    <h2>JSCOUP Admin</h2>
+    <p>__JSCOUP_SERVICE__ · __JSCOUP_ENV__</p>
+    <label>Username</label>
+    <input id="login-username" autocomplete="username" required>
+    <label>Password</label>
+    <input id="login-password" type="password" autocomplete="current-password" required>
+    <button class="run" id="login-submit" type="submit">Sign in</button>
+    <div class="login-error" id="login-error"></div>
+  </form>
+</div>
+
+<script>
+const MOUNT = "__JSCOUP_MOUNT__";
+try { localStorage.removeItem("jscoup-token"); localStorage.removeItem("jscoup-gw-token"); } catch { /* unavailable storage */ }
+const api = (p, o) => fetch(MOUNT + "/api" + p, o).then(async r => {
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 401 && data.login_required) { showLogin(); throw new Error("login_required"); }
+  return data;
+});
+// Gateway sub-users authenticate with a Bearer token (see /gw/login), not the
+// admin session cookie — a separate, always-scoped call path.
+const gwApi = (p, o = {}) => {
+  const headers = Object.assign({}, o.headers, { Authorization: "Bearer " + state.gwToken });
+  return fetch(MOUNT + "/gw" + p, Object.assign({}, o, { headers })).then(async r => {
+    const data = await r.json().catch(() => ({}));
+    if (r.status === 401) { exitGatewayMode(); showLogin(); throw new Error("gateway_login_required"); }
+    return data;
+  });
+};
+const $ = s => document.querySelector(s);
+const el = (t, c, h) => { const n = document.createElement(t); if (c) n.className = c; if (h !== undefined) n.innerHTML = h; return n; };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ago = ts => { const d = Date.now() / 1000 - ts; if (d < 60) return Math.max(0, Math.floor(d)) + "s"; if (d < 3600) return Math.floor(d / 60) + "m"; if (d < 86400) return Math.floor(d / 3600) + "h"; return Math.floor(d / 86400) + "d"; };
+const baseUrl = () => window.location.origin;
+const fullUrl = t => (t.kind === "http" ? baseUrl() + (t.path || "") : null);
+async function copyToClipboard(text) {
+  try { await navigator.clipboard.writeText(text); toast("Copied " + text); }
+  catch { toast(text); }
+}
+
+/* ---------- compact icon buttons (row actions) — title attribute is the tooltip ---------- */
+const ICONS = {
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  hide: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 8 10 8a9.74 9.74 0 0 0 5.39-1.61"/><path d="M2 2l20 20"/><path d="M9.53 9.53a3 3 0 0 0 4.24 4.24"/></svg>',
+};
+function iconBtn(name, title, cls) {
+  const btn = el("button", "icon-btn" + (cls ? " " + cls : ""), ICONS[name]);
+  btn.type = "button"; btn.title = title; btn.setAttribute("aria-label", title);
+  return btn;
+}
+const clock = ts => new Date(ts * 1000).toLocaleTimeString([], { hour12: false });
+let state = { view: "overview", target: null, filters: {}, timer: null, mode: null, gwToken: null };
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2200); }
+
+/* ---------- small modal component: replaces browser confirm()/prompt() ---------- */
+function openModal(html) { $("#modal-card").innerHTML = html; $("#modal-overlay").classList.add("show"); }
+function closeModal() { $("#modal-overlay").classList.remove("show"); $("#modal-card").innerHTML = ""; $("#modal-card").classList.remove("wide"); }
+$("#modal-overlay").addEventListener("mousedown", e => { if (e.target.id === "modal-overlay") closeModal(); });
+
+function confirmModal({ title, body, confirmLabel = "Confirm", danger = false }) {
+  return new Promise(resolve => {
+    openModal(`<h3>${esc(title)}</h3><p class="modal-body">${body}</p>
+      <div class="row-actions" style="justify-content:flex-end;margin-top:20px">
+        <button class="btn-sm" id="modal-cancel">Cancel</button>
+        <button class="run${danger ? " danger" : ""}" id="modal-confirm" style="margin-top:0">${esc(confirmLabel)}</button>
+      </div>`);
+    $("#modal-cancel").onclick = () => { closeModal(); resolve(false); };
+    $("#modal-confirm").onclick = () => { closeModal(); resolve(true); };
+  });
+}
+
+function promptPasswordModal({ title, label }) {
+  return new Promise(resolve => {
+    openModal(`<h3>${esc(title)}</h3>
+      <div class="form">
+        <label>${esc(label)}</label>
+        <input type="password" id="modal-pw1" placeholder="min. 8 characters" autocomplete="new-password">
+        <label>Confirm password</label>
+        <input type="password" id="modal-pw2" placeholder="type it again" autocomplete="new-password">
+        <div class="login-error" id="modal-pw-error"></div>
+      </div>
+      <div class="row-actions" style="justify-content:flex-end;margin-top:20px">
+        <button class="btn-sm" id="modal-cancel">Cancel</button>
+        <button class="run" id="modal-confirm" style="margin-top:0">Set password</button>
+      </div>`);
+    $("#modal-pw1").focus();
+    const submit = () => {
+      const a = $("#modal-pw1").value, b = $("#modal-pw2").value;
+      if (a.length < 8) { $("#modal-pw-error").textContent = "Must be at least 8 characters"; return; }
+      if (a !== b) { $("#modal-pw-error").textContent = "Passwords don't match"; return; }
+      closeModal(); resolve(a);
+    };
+    $("#modal-cancel").onclick = () => { closeModal(); resolve(null); };
+    $("#modal-confirm").onclick = submit;
+    $("#modal-pw2").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submit(); } });
+  });
+}
+
+function promptTextModal({ title, label, value = "", placeholder = "" }) {
+  return new Promise(resolve => {
+    openModal(`<h3>${esc(title)}</h3>
+      <div class="form">
+        <label>${esc(label)}</label>
+        <textarea id="modal-text" rows="3" placeholder="${esc(placeholder)}">${esc(value)}</textarea>
+      </div>
+      <div class="row-actions" style="justify-content:flex-end;margin-top:20px">
+        <button class="btn-sm" id="modal-cancel">Cancel</button>
+        <button class="run" id="modal-confirm" style="margin-top:0">Save</button>
+      </div>`);
+    $("#modal-text").focus();
+    $("#modal-cancel").onclick = () => { closeModal(); resolve(null); };
+    $("#modal-confirm").onclick = () => { const v = $("#modal-text").value; closeModal(); resolve(v); };
+  });
+}
+
+/* ---------- theme ---------- */
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  try { localStorage.setItem("jscoup-theme", theme); } catch { /* private mode */ }
+  $("#btn-theme").textContent = theme === "light" ? "Dark mode" : "Light mode";
+}
+let savedTheme = "dark";
+try { savedTheme = localStorage.getItem("jscoup-theme") || "dark"; } catch { /* private mode */ }
+applyTheme(savedTheme);
+$("#btn-theme").onclick = () => applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light");
+
+/* ---------- navigation ---------- */
+document.querySelectorAll(".nav button").forEach(b => b.onclick = () => show(b.dataset.view));
+document.addEventListener("click", ev => {
+  const b = ev.target.closest && ev.target.closest(".seg button[data-seg]");
+  if (b) show(b.dataset.seg);
+});
+function show(view) {
+  state.view = view;
+  const navView = view === "docgroups" ? "access" : view;
+  document.querySelectorAll(".nav button").forEach(b => b.setAttribute("aria-current", b.dataset.view === navView));
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("hidden", v.id !== "view-" + view));
+  refresh();
+}
+
+/* ---------- overview ---------- */
+async function loadCallSummary() {
+  const c = await api("/call-log/summary");
+  const card = $("#calls-card");
+  if (c.enabled === false) {
+    card.querySelector("table").hidden = true;
+    $("#calls-summary").textContent = "The call log is switched off (call_log_enabled=False in the app's JSCoup config).";
+    return;
+  }
+  card.querySelector("table").hidden = false;
+  $("#calls-summary").innerHTML = `<b>${c.total_calls}</b> calls · <span style="color:var(--ok)"><b>${c.succeeded}</b> succeeded</span> · <span style="color:var(--err)"><b>${c.failed}</b> failed</span> · kept for ${c.retention_days || "unlimited"} days`;
+  const body = $("#calls-body"); body.innerHTML = "";
+  $("#calls-empty").innerHTML = c.apis.length ? "" : `<div class="empty"><b>No calls yet</b>Every call to any API is listed here — successes included.</div>`;
+  c.apis.forEach(a => {
+    const tr = el("tr");
+    tr.innerHTML = `<td class="mono">${esc(a.name)}</td><td class="mono">${a.calls}</td>
+      <td class="mono" style="color:var(--ok)">${a.succeeded}</td>
+      <td class="mono" style="color:${a.failed ? "var(--err)" : "var(--dim)"}">${a.failed}</td>
+      <td class="mono" style="color:var(--muted)">${a.avg_ms ?? "—"}</td>
+      <td class="mono" style="color:var(--dim)">${a.last_ts ? ago(a.last_ts) + " ago" : "—"}</td>`;
+    body.append(tr);
+  });
+}
+async function loadOverview() {
+  loadCallSummary();
+  const s = await api("/summary");
+  $("#tiles").innerHTML = "";
+  const tiles = [
+    ["events", s.events, ""], ["errors", s.errors, "err"], ["slow", s.slow, "warn"],
+    ["issues", s.issues, ""], ["callers hit", s.actors, ""], ["avg ms", s.avg_ms, "ok"],
+    ["sql stmts", s.queries, ""]
+  ];
+  tiles.forEach(([k, v, c]) => {
+    const t = el("div", "tile " + c);
+    t.append(el("div", "k", esc(k)), el("div", "v", esc(v ?? 0)));
+    $("#tiles").append(t);
+  });
+  bars("#by-category", (s.by_category || []).map(r => [r.category, r.count]));
+  bars("#by-endpoint", (s.by_endpoint || []).map(r => [r.name, r.count]));
+  bars("#by-actor", (s.by_actor || []).map(r => [r.actor, r.count]));
+  const list = await api("/events?limit=8&status=error");
+  const box = $("#latest"); box.innerHTML = "";
+  if (!list.events.length) box.append(el("div", "empty", "<b>All clear</b>No failures recorded yet."));
+  list.events.forEach(e => {
+    const row = el("div", "bar-row");
+    row.style.gridTemplateColumns = "56px 1fr 44px";
+    row.innerHTML = `<span class="label">${clock(e.ts)}</span>
+      <span class="label" title="${esc(e.title || e.error_type)}"><span class="dot ${e.status}"></span>${esc(e.name)} — ${esc(e.title || e.error_type || "")}</span>
+      <span class="n">${ago(e.ts)}</span>`;
+    row.style.cursor = "pointer"; row.onclick = () => openEvent(e.id);
+    box.append(row);
+  });
+}
+function bars(sel, rows) {
+  const box = $(sel); box.innerHTML = "";
+  if (!rows.length) { box.append(el("div", "empty", "No data yet")); return; }
+  const max = Math.max(...rows.map(r => r[1]), 1);
+  rows.forEach(([label, n]) => {
+    const row = el("div", "bar-row");
+    row.innerHTML = `<span class="label" title="${esc(label)}">${esc(label)}</span>
+      <span class="track"><span class="fill" style="width:${(n / max) * 100}%"></span></span>
+      <span class="n">${n}</span>`;
+    box.append(row);
+  });
+}
+
+/* ---------- trace strip ---------- */
+async function loadTrace() {
+  const { buckets } = await api("/timeline?buckets=60&window=3600");
+  const strip = $("#trace"); strip.innerHTML = "";
+  const max = Math.max(...buckets.map(b => b.errors + b.slow + b.ok), 1);
+  let total = 0;
+  buckets.forEach(b => {
+    const n = b.errors + b.slow + b.ok; total += n;
+    const bar = el("i");
+    bar.style.height = Math.max(2, (n / max) * 46) + "px";
+    bar.dataset.k = b.errors ? "error" : b.slow ? "slow" : n ? "ok" : "";
+    bar.title = `${new Date(b.start * 1000).toLocaleTimeString([], { hour12: false })} · ${b.errors} errors, ${b.slow} slow, ${b.ok} ok`;
+    strip.append(bar);
+  });
+  $("#strip-total").textContent = total;
+}
+
+/* ---------- events ---------- */
+function eventFilters() {
+  const q = new URLSearchParams({ limit: 100 });
+  ["search", "status", "category", "kind", "window"].forEach(k => {
+    const v = $("#f-" + k).value.trim();
+    if (v) q.set(k, v);
+  });
+  return q.toString();
+}
+async function loadEveryCall() {
+  const q = new URLSearchParams({ limit: "200" });
+  const status = $("#f-status").value;
+  if (status === "ok") q.set("ok", "1"); else if (status === "error") q.set("ok", "0");
+  if ($("#f-window").value) q.set("window", $("#f-window").value);
+  const data = await api("/call-log?" + q);
+  const search = $("#f-search").value.trim().toLowerCase();
+  const rows = (data.calls || []).filter(c => !search || `${c.name} ${c.path || ""} ${c.actor || ""}`.toLowerCase().includes(search));
+  $("#nav-events").textContent = data.total || "";
+  $("#events-empty").innerHTML = rows.length ? "" : `<div class="empty"><b>${data.enabled === false ? "Call log is off" : "No calls recorded"}</b>${data.enabled === false ? "Set call_log_enabled=True in the app's JSCoup config." : "Every call — successes too — appears here."}</div>`;
+  const body = $("#calls-list-body"); body.innerHTML = "";
+  rows.forEach(c => {
+    const tr = el("tr");
+    const preview = c.response_preview ? `<details><summary>view</summary><pre style="max-width:420px;white-space:pre-wrap">${esc(c.response_preview)}</pre></details>` : `<span style="color:var(--dim)">—</span>`;
+    tr.innerHTML = `<td class="mono" style="color:var(--dim)">${clock(c.ts)}<br><span style="font-size:10px">${ago(c.ts)} ago</span></td>
+      <td class="mono">${esc(c.name)}</td>
+      <td class="mono">${c.status_code ?? "—"}</td>
+      <td><span class="dot ${c.ok ? "ok" : "error"}"></span>${c.ok ? "success" : "failed"}</td>
+      <td class="mono" style="color:var(--muted)">${esc(c.actor || "anonymous")}</td>
+      <td class="mono" style="color:var(--muted)">${c.duration_ms ?? "—"}</td>
+      <td>${preview}</td>`;
+    body.append(tr);
+  });
+}
+async function loadEvents() {
+  const everyCall = $("#f-source").value === "calls";
+  $("#calls-table").hidden = !everyCall;
+  document.querySelector("#view-events > table:not(#calls-table)").hidden = everyCall;
+  if (everyCall) return loadEveryCall();
+  const data = await api("/events?" + eventFilters());
+  const body = $("#events-body"); body.innerHTML = "";
+  $("#nav-events").textContent = data.total || "";
+  $("#events-empty").innerHTML = data.events.length ? "" :
+    `<div class="empty"><b>Nothing captured</b>Trigger a request, or run one from the live tester.</div>`;
+  const cats = new Set();
+  data.events.forEach(e => {
+    cats.add(e.category);
+    const tr = el("tr");
+    tr.onclick = () => openEvent(e.id);
+    tr.innerHTML = `
+      <td class="mono" style="color:var(--dim)">${clock(e.ts)}<br><span style="font-size:10px">${ago(e.ts)} ago</span></td>
+      <td class="mono"><span class="dot ${e.status}"></span>${esc(e.method || e.kind.toUpperCase())} ${esc(e.path || e.name)}
+        ${e.status_code ? `<span style="color:var(--dim)"> · ${e.status_code}</span>` : ""}</td>
+      <td><span class="tag ${esc(e.category)}">${esc(e.category)}</span>
+        <div class="truncate" style="margin-top:4px;color:var(--muted)">${esc(e.title || e.error_message || "—")}</div></td>
+      <td class="mono" style="color:var(--muted)">${esc(e.actor || "anonymous")}</td>
+      <td class="mono" style="color:var(--muted)">${e.query_count}${e.db_time_ms ? ` · ${e.db_time_ms}ms` : ""}</td>
+      <td class="mono" style="color:var(--muted)">${Math.round(e.duration_ms)}</td>`;
+    body.append(tr);
+  });
+  const sel = $("#f-category");
+  if (sel.options.length <= 1) [...cats].filter(Boolean).forEach(c => sel.append(new Option(c, c)));
+}
+["f-search", "f-source", "f-status", "f-category", "f-kind", "f-window"].forEach(id => {
+  const node = document.getElementById(id);
+  node.oninput = node.onchange = () => loadEvents();
+});
+
+/* ---------- issues ---------- */
+async function loadIssues() {
+  const { issues } = await api("/issues?limit=60");
+  const body = $("#issues-body"); body.innerHTML = "";
+  $("#nav-issues").textContent = issues.length || "";
+  $("#issues-empty").innerHTML = issues.length ? "" : `<div class="empty"><b>No grouped failures</b>Issues appear once the same error is seen.</div>`;
+  issues.forEach(i => {
+    const tr = el("tr");
+    tr.onclick = () => { $("#f-search").value = i.error_type || ""; show("events"); };
+    tr.innerHTML = `<td class="mono" style="font-size:16px;color:var(--err)">${i.count}</td>
+      <td><span class="tag ${esc(i.category)}">${esc(i.category)}</span>
+        <div class="truncate" style="margin-top:4px"><b class="mono">${esc(i.error_type || "")}</b>
+        <span style="color:var(--muted)"> ${esc((i.error_message || "").slice(0, 120))}</span></div></td>
+      <td class="mono">${esc(i.method || "")} ${esc(i.path || i.name || "")}</td>
+      <td class="mono" style="color:var(--muted)">${i.actors}</td>
+      <td class="mono" style="color:var(--muted)">${ago(i.last_seen)} ago</td>`;
+    body.append(tr);
+  });
+}
+
+/* ---------- event detail ---------- */
+async function openEvent(id) {
+  const e = await api("/events/" + id);
+  $("#d-title").textContent = (e.method ? e.method + " " : "") + (e.path || e.name);
+  $("#d-sub").textContent = `${e.kind} · ${new Date(e.ts * 1000).toLocaleString()} · ${Math.round(e.duration_ms)} ms · id ${e.id}`;
+  const b = $("#d-body"); b.innerHTML = "";
+
+  if (e.diagnosis) {
+    const d = e.diagnosis;
+    const box = el("div", "diag");
+    box.style.borderLeftColor = d.severity === "critical" ? "var(--err)" : d.severity === "warning" ? "var(--warn)" : "var(--err)";
+    const confidenceTier = d.confidence >= 0.8 ? "High" : d.confidence >= 0.5 ? "Medium" : "Low";
+    box.innerHTML = `<div class="lbl" title="A fixed weight this rule was authored with, not a statistically calibrated probability">${esc(d.category)} · ${esc(d.subtype)} · match confidence: ${confidenceTier} (${Math.round(d.confidence * 100)}% heuristic)</div>
+      <h4>${esc(d.title)}</h4><p>${esc(d.summary)}</p>
+      ${d.likely_causes?.length ? `<div class="lbl">Likely causes</div><ul>${d.likely_causes.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}
+      ${d.suggested_fixes?.length ? `<div class="lbl">Suggested fixes</div><ul>${d.suggested_fixes.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}`;
+    b.append(box);
+    if (d.evidence && Object.keys(d.evidence).length) {
+      const det = el("details"); det.append(el("summary", "", "Evidence"));
+      det.append(el("pre", "", esc(JSON.stringify(d.evidence, null, 2))));
+      b.append(det);
+    }
+  }
+
+  const kv = el("dl", "kv");
+  const rows = [
+    ["error", e.error_type ? `${e.error_type}: ${e.error_message}` : "—"],
+    ["culprit", e.culprit || "—"],
+    ["caller", e.actor ? `${e.actor.label || "anonymous"}${e.actor.token_fingerprint ? " · token " + e.actor.token_fingerprint : ""}` : "anonymous"],
+    ["token source", e.actor?.source || "—"],
+    ["status code", e.status_code ?? "—"],
+    ["sql", `${e.query_count} statements · ${e.db_time_ms} ms`],
+    ["fingerprint", e.fingerprint || "—"],
+    ["service", `${e.service} · ${e.environment} · ${e.host}`]
+  ];
+  rows.forEach(([k, v]) => { kv.append(el("dt", "", esc(k)), el("dd", "", esc(v))); });
+  b.append(kv);
+
+  if (e.culprit_line) {
+    b.append(el("div", "", `<span style="font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)">Exact line</span>`));
+    b.append(el("pre", "sql", esc(e.culprit_line)));
+  }
+
+  if (e.stdout_capture) {
+    const det = el("details"); det.append(el("summary", "", "Captured output (print)"));
+    det.append(el("pre", "", esc(e.stdout_capture))); b.append(det);
+  }
+
+  if (e.queries?.length) {
+    b.append(el("h2", "section", "SQL trail"));
+    e.queries.forEach(q => {
+      const box = el("div", "q" + (q.error ? " failed" : ""));
+      box.innerHTML = `<header><span>${esc(q.caller || q.backend)}</span><span>${q.duration_ms} ms${q.rowcount != null ? " · rows " + q.rowcount : ""}${q.error ? " · FAILED" : ""}</span></header>
+        <pre class="sql">${esc(q.sql)}</pre>
+        <header style="border-top:1px solid var(--line)"><span>params</span><span>${esc(q.params_preview || "")}</span></header>
+        ${q.error ? `<header style="color:var(--err)"><span>${esc(q.error)}</span><span></span></header>` : ""}`;
+      b.append(box);
+    });
+  }
+
+  if (Object.keys(e.params || {}).length) {
+    const det = el("details"); det.append(el("summary", "", "Parameters"));
+    det.append(el("pre", "", esc(JSON.stringify(e.params, null, 2)))); b.append(det);
+  }
+  if (e.body_preview) {
+    const det = el("details"); det.append(el("summary", "", "Request body"));
+    det.append(el("pre", "", esc(e.body_preview))); b.append(det);
+  }
+  if (e.breadcrumbs?.length) {
+    const det = el("details"); det.append(el("summary", "", `Breadcrumbs (${e.breadcrumbs.length})`));
+    det.append(el("pre", "", e.breadcrumbs.map(c => `${clock(c.ts)}  [${esc(c.category)}] ${esc(c.message)} ${Object.keys(c.data || {}).length ? esc(JSON.stringify(c.data)) : ""}`).join("\n")));
+    b.append(det);
+  }
+  if (e.traceback_text) {
+    const det = el("details"); det.open = true; det.append(el("summary", "", "Traceback"));
+    det.append(el("pre", "", esc(e.traceback_text))); b.append(det);
+  }
+  if (e.headers && Object.keys(e.headers).length) {
+    const det = el("details"); det.append(el("summary", "", "Headers"));
+    det.append(el("pre", "", esc(JSON.stringify(e.headers, null, 2)))); b.append(det);
+  }
+  if (e.related?.length) {
+    const det = el("details"); det.append(el("summary", "", `Same fingerprint (${e.related.length})`));
+    const list = el("div");
+    e.related.forEach(r => {
+      const btn = el("button", "link", `${clock(r.ts)} · ${esc(r.actor?.label || "anonymous")} · ${Math.round(r.duration_ms)}ms`);
+      btn.style.display = "block"; btn.onclick = () => openEvent(r.id);
+      list.append(btn);
+    });
+    det.append(list); b.append(det);
+  }
+
+  if (e.path || e.kind !== "http") {
+    const rerun = el("button", "run", "Re-run in live tester");
+    rerun.onclick = () => { prefillFromEvent(e); $("#drawer").classList.remove("open"); show("lab"); };
+    b.append(rerun);
+  }
+  $("#drawer").classList.add("open");
+}
+$("#d-close").onclick = () => $("#drawer").classList.remove("open");
+document.addEventListener("keydown", ev => { if (ev.key === "Escape") $("#drawer").classList.remove("open"); });
+
+$("#btn-export-postman").onclick = () => window.open(MOUNT + "/api/postman.json", "_blank");
+
+/* ---------- live tester (Swagger-style: grouped by tag, per-op panel) ---------- */
+let targets = [];
+let docGroupsCache = [];
+const collapsedTags = new Set();
+// The Live Tester lists APIs under the source file they are defined in
+// (pedido_api.py, sped_api.py ...); anything without a known file falls back to
+// its category/tag.
+function groupOf(t) {
+  return t.source_file || tagOf(t);
+}
+// APIs are listed POST, GET, PUT, PATCH, DELETE (anything else last), then by path.
+const METHOD_RANK = { POST: 0, GET: 1, PUT: 2, PATCH: 3, DELETE: 4 };
+function byMethod(a, b) {
+  const rank = t => METHOD_RANK[(t.method || "").toUpperCase()] ?? 9;
+  return rank(a) - rank(b) || String(a.path || a.name).localeCompare(String(b.path || b.name));
+}
+function tagOf(t) {
+  if (t.category) return t.category;
+  if (t.tags && t.tags.length) return t.tags[0];
+  return t.kind === "service" ? "service" : "default";
+}
+async function loadTargets() {
+  const data = state.mode === "gateway" ? await gwApi("/my-targets") : await api("/targets");
+  targets = data.targets;
+  $("#nav-targets").textContent = targets.length || "";
+  refreshTokenBar();
+  const box = $("#targets"); box.innerHTML = "";
+  if (!targets.length) { box.append(el("div", "empty", "<b>No targets</b>Install JSCoup on the app to discover routes.")); return; }
+  const groups = new Map();
+  targets.forEach(t => {
+    const tag = groupOf(t);
+    if (!groups.has(tag)) groups.set(tag, []);
+    groups.get(tag).push(t);
+  });
+  [...groups.keys()].sort().forEach(tag => {
+    const items = groups.get(tag).slice().sort(byMethod);
+    const group = el("div", "tag-group" + (collapsedTags.has(tag) ? " collapsed" : ""));
+    const header = el("button", "tag-header");
+    header.innerHTML = `<span><span class="arrow">▾</span> ${esc(tag)}</span><span class="n">${items.length}</span>`;
+    header.onclick = () => {
+      group.classList.toggle("collapsed");
+      if (group.classList.contains("collapsed")) collapsedTags.add(tag); else collapsedTags.delete(tag);
+    };
+    group.append(header);
+    const body = el("div", "tag-body");
+    items.forEach(t => {
+      const row = el("button", "op-row");
+      row.dataset.id = t.id;
+      const m = (t.method || "call").toLowerCase();
+      row.title = fullUrl(t) || t.name;
+      row.innerHTML = `<span class="mbadge ${esc(m)}">${esc(t.kind === "service" ? "call" : t.method)}</span>
+        <span class="p">${esc(t.path || t.name)}</span>
+        ${t.requires_auth ? '<span class="lock">🔒</span>' : ""}`;
+      row.onclick = () => selectTarget(t.id);
+      body.append(row);
+    });
+    group.append(body);
+    box.append(group);
+  });
+  if (state.target && $("#lab-form").dataset.target !== state.target) selectTarget(state.target, true);
+  else document.querySelectorAll(".op-row").forEach(b => b.setAttribute("aria-current", b.dataset.id === state.target));
+}
+function selectTarget(id, keepValues) {
+  state.target = id;
+  const t = targets.find(x => x.id === id); if (!t) return;
+  document.querySelectorAll(".op-row").forEach(b => b.setAttribute("aria-current", b.dataset.id === id));
+  const m = (t.method || "call").toLowerCase();
+  const url = fullUrl(t);
+  $("#lab-title").innerHTML = `<span class="op-head"><span class="mbadge ${esc(m)}">${esc(t.kind === "service" ? "call" : t.method)}</span><span class="path">${esc(t.path || t.name)}</span></span>
+    ${url ? `<div class="url-line"><code class="mono">${esc(url)}</code><button type="button" class="btn-sm" id="lab-copy-url">Copy</button></div>` : ""}`;
+  if (url) $("#lab-copy-url").onclick = () => copyToClipboard(url);
+  const need = el("span", "lab-need " + (!t.requires_auth ? "open" : (labToken() ? "locked" : "blocked")));
+  need.textContent = !t.requires_auth ? (t.auth_optional ? "Token optional — works without one" : "Open API — no token needed") : (labToken() ? "\u{1F512} Uses the token above" : "\u{1F512} Needs a token — enter it above");
+  $("#lab-title").append(need);
+  const form = $("#lab-form");
+  form.dataset.target = id;
+  const previous = keepValues ? currentValues() : {};
+  form.innerHTML = "";
+  if (state.gatewayEnabled && t.kind === "http") {
+    const wrap = el("label");
+    wrap.style.cssText = "display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;color:var(--muted);font-size:11.5px;margin-top:0";
+    const cb = el("input"); cb.type = "checkbox"; cb.style.width = "auto"; cb.checked = !!t.is_public;
+    cb.onchange = async () => {
+      await api(`/gateway/targets/${encodeURIComponent(t.id)}/public`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ public: cb.checked }),
+      });
+      t.is_public = cb.checked;
+      toast(cb.checked ? "Now public — no token needed via /gw/" : "No longer public");
+    };
+    wrap.append(cb, document.createTextNode(" Public via gateway (no token required at /gw/" + t.id + ")"));
+    form.append(wrap);
+  }
+  if (t.description) form.append(el("div", "op-desc", esc(t.description)));
+  if (t.full_description && t.full_description.trim() !== (t.description || "").trim()) {
+    const det = el("details"); det.append(el("summary", "", "Full description"));
+    det.append(el("div", "op-desc full", esc(t.full_description)));
+    form.append(det);
+  }
+  if ((t.params || []).length) {
+    form.append(el("label", "", "Parameters"));
+    const table = el("table", "ptable");
+    table.innerHTML = `<thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th><th>Value</th></tr></thead>`;
+    const tbody = el("tbody");
+    (t.params || []).forEach(p => {
+      const tr = el("tr");
+      tr.innerHTML = `<td class="pname">${esc(p.name)}${p.required ? '<span class="req">*</span>' : ""}</td>
+        <td class="ploc">${esc(p.location)}</td>
+        <td class="ptype">${esc(p.type)}</td>
+        <td class="pdesc">${esc(p.description || "—")}</td>
+        <td></td>`;
+      const input = el("input");
+      input.dataset.param = p.name;
+      if (p.type === "file") {
+        input.type = "file";
+        input.accept = "image/*,application/pdf,text/*,.csv,.xlsx,.xls,.json,.zip";
+        const box = el("div", "filebox");
+        const info = el("span", "fname", "no file chosen");
+        const prev = el("img"); prev.hidden = true;
+        input.onchange = async () => {
+          const f = input.files && input.files[0];
+          input._file = null; prev.hidden = true;
+          if (!f) { info.textContent = "no file chosen"; return; }
+          if (f.size > 8 * 1024 * 1024) { info.textContent = "too large (max 8 MB)"; input.value = ""; toast("File is larger than 8 MB"); return; }
+          const data = await new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => resolve(String(r.result).split(",")[1] || "");
+            r.onerror = reject;
+            r.readAsDataURL(f);
+          });
+          input._file = { filename: f.name, content_type: f.type || "application/octet-stream", data };
+          info.textContent = `${f.name} · ${(f.size / 1024).toFixed(1)} KB`;
+          if ((f.type || "").startsWith("image/")) { prev.src = "data:" + f.type + ";base64," + data; prev.hidden = false; }
+        };
+        box.append(input, prev, info);
+        tr.lastElementChild.append(box);
+        tbody.append(tr);
+        return;
+      }
+      const exampleValue = p.example != null ? (typeof p.example === "object" ? JSON.stringify(p.example) : String(p.example)) : p.type;
+      input.placeholder = "e.g. " + exampleValue;
+      input.value = previous[p.name] ?? "";
+      tr.lastElementChild.append(input);
+      tbody.append(tr);
+    });
+    table.append(tbody);
+    form.append(table);
+  }
+  if (t.kind === "http" && t.method !== "GET") {
+    form.append(el("label", "", `JSON body <span style="color:var(--dim)">· merged with fields above</span>`));
+    const ta = el("textarea"); ta.id = "lab-body";
+    ta.placeholder = JSON.stringify(t.request_example || { field: "value" }, null, 2);
+    form.append(ta);
+  }
+  const run = el("button", "run", "Execute");
+  run.onclick = () => invoke(t);
+  form.append(run);
+}
+function currentValues() {
+  const out = {};
+  document.querySelectorAll("#lab-form input[data-param]").forEach(i => {
+    if (i.type === "file") { if (i._file) out[i.dataset.param] = i._file; return; }
+    if (i.value) out[i.dataset.param] = i.value;
+  });
+  return out;
+}
+function prefillFromEvent(e) {
+  const id = e.kind === "http" ? `http:${e.method}:${e.route || e.path}` : `service:${e.name}`;
+  const found = targets.find(t => t.id === id) || targets.find(t => (t.path && t.path === e.route) || t.name === e.name);
+  if (!found) { toast("No matching target — pick one manually"); return; }
+  selectTarget(found.id);
+  setTimeout(() => {
+    document.querySelectorAll("#lab-form input[data-param]:not([type=file])").forEach(i => {
+      const v = (e.params || {})[i.dataset.param];
+      if (v != null && typeof v !== "object") i.value = v;
+    });
+    const body = $("#lab-body");
+    if (body && e.params) body.value = JSON.stringify(e.params, null, 2);
+  }, 30);
+}
+function labToken() { return ($("#lab-token")?.value || "").trim(); }
+function labTokenStore() { return state.mode === "gateway" ? sessionStorage : localStorage; }
+function refreshTokenBar() {
+  const n = targets.filter(t => t.requires_auth).length;
+  const st = $("#lab-token-state");
+  if (!st) return;
+  if (!n) { st.textContent = "No API in this app needs a token"; st.className = "tb-state ok"; return; }
+  st.textContent = labToken() ? `Token set — applied to ${n} protected API${n === 1 ? "" : "s"}` : `${n} protected API${n === 1 ? " is" : "s are"} locked until you add a token`;
+  st.className = "tb-state " + (labToken() ? "ok" : "warn");
+}
+function initTokenBar() {
+  const inp = $("#lab-token");
+  try { inp.value = labTokenStore().getItem("jscoup-token") || ""; } catch { /* private mode */ }
+  inp.oninput = () => {
+    try { labTokenStore().setItem("jscoup-token", inp.value.trim()); } catch { /* private mode */ }
+    refreshTokenBar();
+    if (state.target) { const t = targets.find(x => x.id === state.target); if (t) { const n = document.querySelector(".lab-need"); if (n) { n.className = "lab-need " + (!t.requires_auth ? "open" : (labToken() ? "locked" : "blocked")); n.textContent = !t.requires_auth ? (t.auth_optional ? "Token optional — works without one" : "Open API — no token needed") : (labToken() ? "\u{1F512} Uses the token above" : "\u{1F512} Needs a token — enter it above"); } } }
+  };
+  $("#lab-token-show").onclick = () => {
+    const hidden = inp.type === "password";
+    inp.type = hidden ? "text" : "password";
+    $("#lab-token-show").textContent = hidden ? "Hide" : "Show";
+  };
+  $("#lab-token-clear").onclick = () => { inp.value = ""; inp.oninput(); };
+  refreshTokenBar();
+}
+async function invoke(t) {
+  // Respect the app's own security level: an API its source marks as
+  // needing a token can't be run from here without one — never fire the
+  // request blind and let it bounce, and never offer a way around it.
+  if (t.requires_auth && !labToken()) {
+    toast("This API requires a token — enter one above to run it");
+    $("#lab-token")?.focus();
+    return;
+  }
+  const btn = document.querySelector(".run"); btn.disabled = true; btn.textContent = "running…";
+  const params = currentValues();
+  const bodyField = $("#lab-body");
+  if (bodyField && bodyField.value.trim()) {
+    try { Object.assign(params, JSON.parse(bodyField.value)); }
+    catch { toast("Body is not valid JSON"); btn.disabled = false; btn.textContent = "Run and capture"; return; }
+  }
+  let res;
+  if (state.mode === "gateway") {
+    const method = t.kind === "service" ? "POST" : (t.method || "GET").toUpperCase();
+    const isBodyless = method === "GET" || method === "HEAD";
+    const qs = isBodyless && Object.keys(params).length ? "?" + new URLSearchParams(params).toString() : "";
+    const downstreamToken = labToken();
+    const headers = Object.assign(
+      { Authorization: "Bearer " + state.gwToken },
+      isBodyless ? {} : { "Content-Type": "application/json" },
+      downstreamToken ? { "X-Downstream-Token": downstreamToken } : {},
+    );
+    try {
+      const r = await fetch(MOUNT + "/gw/" + encodeURIComponent(t.id) + qs, {
+        method, headers, body: isBodyless ? undefined : JSON.stringify(params),
+      });
+      res = await r.json().catch(() => ({}));
+      if (r.status === 401) { exitGatewayMode(); showLogin(); }
+    } catch (err) { res = { ok: false, error: "Could not reach the API — " + String(err) }; }
+  } else {
+    const token = labToken();
+    try {
+      res = await api("/invoke", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target_id: t.id, params, token: token || null })
+      });
+    } catch (err) { res = { ok: false, error: String(err) }; }
+  }
+  btn.disabled = false; btn.textContent = "Run and capture";
+  const box = $("#lab-result"); box.innerHTML = "";
+  const raw = res.response ?? res.result ?? res.error ?? res;
+  const isText = typeof raw === "string";
+  const ctype = (res.content_type || "").toLowerCase();
+  const looksHtml = isText && (ctype.includes("html") || /^\s*(<!doctype html|<html|<body|<div|<p[ >])/i.test(raw));
+  const text = isText ? raw : JSON.stringify(raw, null, 2);
+  const head = el("div", "resp-head");
+  head.append(el("span", "chip " + (res.ok ? "ok" : "bad"), (res.ok ? "SUCCESS" : "FAILED") + (res.status_code ? " · HTTP " + res.status_code : "")));
+  if (res.duration_ms != null) head.append(el("span", "chip info", res.duration_ms + " ms"));
+  head.append(el("span", "chip info", isText ? (looksHtml ? "HTML" : "text") : "JSON"));
+  head.append(el("span", "chip info", (new Blob([text]).size / 1024).toFixed(1) + " KB"));
+  const tools = el("div", "resp-tools");
+  const copy = el("button", "btn-sm", "Copy"); copy.type = "button";
+  copy.onclick = () => copyToClipboard(text);
+  tools.append(copy);
+  head.append(tools);
+  box.append(head);
+  if (!res.ok) {
+    const respError = raw && typeof raw === "object" ? (raw.error || raw.detail) : null;
+    const status = res.status_code;
+    let hint = "";
+    if (status === 401 || status === 403) {
+      hint = "The API refused the request (HTTP " + status + "). It needs a valid token — enter one in the token field above.";
+    } else if (status >= 500 && isText) {
+      hint = "The API answered with " + (looksHtml ? "an HTML error page" : "plain text") + " (HTTP " + status + ") instead of JSON. "
+        + "That means the server crashed before its own JSON error handling ran — often because a required "
+        + "header such as the token was missing, or an exception was re-raised. Check the server log; "
+        + "the captured event below holds the traceback.";
+    }
+    const message = respError || res.error || hint || "This call failed. See the raw response below for detail.";
+    box.append(el("div", "diag", `<div class="lbl">Why it failed</div><p style="margin:6px 0 0">${esc(String(message))}</p>`));
+  }
+  const pre = el("pre", "resp-body");
+  pre.textContent = text.length > 200000 ? text.slice(0, 200000) + "\n… (truncated)" : text;
+  box.append(pre);
+  if (looksHtml) {
+    const tog = el("button", "btn-sm", "Preview as page"); tog.type = "button";
+    tog.style.marginTop = "8px";
+    let frame = null;
+    tog.onclick = () => {
+      if (frame) { frame.remove(); frame = null; pre.hidden = false; tog.textContent = "Preview as page"; return; }
+      frame = el("iframe", "resp-frame");
+      frame.setAttribute("sandbox", "");
+      frame.srcdoc = raw;
+      pre.hidden = true; pre.after(frame);
+      tog.textContent = "Show source";
+    };
+    box.append(tog);
+  }
+  if (res.event_id) {
+    const link = el("button", "link", "Open the captured event →");
+    link.onclick = () => openEvent(res.event_id);
+    box.append(link);
+  } else if (state.mode !== "gateway") {
+    box.append(el("div", "", `<span style="color:var(--dim);font-family:var(--sans);font-size:12.5px">No event stored — the call succeeded and capture_success is off.</span>`));
+  }
+  loadTrace();
+}
+
+/* ---------- login ---------- */
+function showLogin() { $("#login-overlay").classList.add("show"); }
+function hideLogin() { $("#login-overlay").classList.remove("show"); }
+
+/* ---------- restricted mode: a gateway sub-user signed in directly ----------
+   Gateway sub-users (see the Access tab) authenticate at POST /gw/login with
+   a Bearer token, not the admin session cookie — they have no admin session
+   and can't reach any /api/* route. This mode gives them a cut-down UI: just
+   the APIs they're allowed to call, and their own call history. */
+function enterGatewayMode(user) {
+  state.mode = "gateway";
+  try { $("#lab-token").value = sessionStorage.getItem("jscoup-token") || ""; } catch { /* private mode */ }
+  document.querySelectorAll(".nav button[data-view]").forEach(b => {
+    b.hidden = b.dataset.view !== "lab";
+  });
+  $(".strip").hidden = true;
+  $("#btn-purge").hidden = true;
+  $("#nav-lab-label").textContent = "My APIs";
+  const meta = $("#gw-user-meta");
+  meta.hidden = false;
+  meta.textContent = (user ? user.label + " · " : "") + "restricted access";
+  show("lab");
+  loadTargets();
+}
+function exitGatewayMode() {
+  state.mode = null; state.gwToken = null; targets = [];
+  try { $("#lab-token").value = sessionStorage.getItem("jscoup-token") || ""; } catch { /* private mode */ }
+  try { sessionStorage.removeItem("jscoup-gw-token"); } catch { /* private mode */ }
+  document.querySelectorAll(".nav button[data-view]").forEach(b => { b.hidden = false; });
+  $("#nav-btn-access").hidden = true; // the admin refresh() below re-shows this if gateway_enabled
+  $("#nav-btn-docgroups").hidden = true;
+  $(".strip").hidden = false;
+  $("#btn-purge").hidden = false;
+  $("#nav-lab-label").textContent = "Live tester";
+  $("#gw-user-meta").hidden = true;
+}
+
+$("#login-form").onsubmit = async ev => {
+  ev.preventDefault();
+  const username = $("#login-username").value;
+  const password = $("#login-password").value;
+  const btn = $("#login-submit"); btn.disabled = true; btn.textContent = "signing in…";
+  let data;
+  try {
+    data = await api("/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+  } catch (err) { data = { ok: false, error: "Could not reach the dashboard" }; }
+  if (data.ok) {
+    btn.disabled = false; btn.textContent = "Sign in";
+    $("#login-error").textContent = "";
+    $("#login-password").value = "";
+    hideLogin();
+    if (state.mode === "gateway") exitGatewayMode(); // restore full nav before switching to admin
+    state.mode = "admin";
+    refresh(); loadTargets();
+    return;
+  }
+  // Not the admin — this might be a gateway sub-user (created in the Access
+  // tab), who signs in the same way here but authenticates differently
+  // server-side. Try that before reporting a failure.
+  try {
+    const r = await fetch(MOUNT + "/gw/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const gwData = await r.json().catch(() => ({}));
+    if (r.ok && gwData.token) {
+      btn.disabled = false; btn.textContent = "Sign in";
+      $("#login-error").textContent = "";
+      $("#login-password").value = "";
+      state.gwToken = gwData.token;
+      try { sessionStorage.setItem("jscoup-gw-token", gwData.token); } catch { /* private mode */ }
+      hideLogin();
+      enterGatewayMode(gwData.user);
+      return;
+    }
+  } catch (err) { /* network error — fall through to the admin error below */ }
+  btn.disabled = false; btn.textContent = "Sign in";
+  $("#login-error").textContent = data.error || "Login failed";
+};
+$("#btn-logout").onclick = async () => {
+  if (state.mode === "gateway") {
+    exitGatewayMode();
+    toast("Logged out");
+    showLogin();
+    return;
+  }
+  try { await api("/logout", { method: "POST" }); } catch (err) { /* already logged out */ }
+  toast("Logged out");
+  showLogin();
+};
+
+/* ---------- code audit ---------- */
+$("#audit-run").onclick = async () => {
+  const paths = $("#audit-paths").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const btn = $("#audit-run"); btn.disabled = true; btn.textContent = "scanning…";
+  let data;
+  try {
+    data = await api("/audit", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paths: paths.length ? paths : null })
+    });
+  } catch (err) { data = { findings: [] }; }
+  btn.disabled = false; btn.textContent = "Run audit";
+  const body = $("#audit-body"); body.innerHTML = "";
+  const findings = data.findings || [];
+  $("#audit-empty").innerHTML = findings.length ? "" :
+    `<div class="empty"><b>No findings</b>Run the audit to scan for naming/style issues.</div>`;
+  findings.forEach(f => {
+    const tr = el("tr");
+    const where = f.file ? `${f.file.split(/[\\/]/).slice(-2).join("/")}:${f.line}` : f.name;
+    tr.innerHTML = `<td class="mono" style="color:var(--muted)">${esc(where)}</td>
+      <td><span class="tag ${f.severity === "warning" ? "performance" : "validation"}">${esc(f.kind)}</span></td>
+      <td>${esc(f.message)}</td>
+      <td style="color:var(--muted)">${esc(f.suggestion)}</td>`;
+    body.append(tr);
+  });
+};
+
+/* ---------- check every API ---------- */
+$("#checkapis-token").value = sessionStorage.getItem("jscoup-token") || "";
+$("#checkapis-run").onclick = async () => {
+  const token = $("#checkapis-token").value.trim();
+  if (token) sessionStorage.setItem("jscoup-token", token);
+  const btn = $("#checkapis-run"); btn.disabled = true; btn.textContent = "running…";
+  let data;
+  try {
+    data = await api("/check-apis", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: token || null })
+    });
+  } catch (err) { data = { results: [] }; }
+  btn.disabled = false; btn.textContent = "Run all";
+
+  const results = data.results || [];
+  const ok = results.filter(r => r.ok === true).length;
+  const failed = results.filter(r => r.ok === false).length;
+  const skipped = results.filter(r => r.ok === null).length;
+  $("#checkapis-summary").textContent =
+    `${results.length} targets · ${ok} OK · ${failed} FAILED · ${skipped} skipped (need parameters)`;
+
+  const body = $("#checkapis-body"); body.innerHTML = "";
+  $("#checkapis-empty").innerHTML = results.length ? "" :
+    `<div class="empty"><b>Nothing to check yet</b>Install JSCoup on the app to discover targets.</div>`;
+  results
+    .slice()
+    .sort((a, b) => (a.ok === false ? -1 : 1) - (b.ok === false ? -1 : 1))
+    .forEach(r => {
+      const tr = el("tr");
+      const color = r.ok === true ? "var(--ok)" : r.ok === false ? "var(--err)" : "var(--dim)";
+      const label = r.ok === true ? "OK" : r.ok === false ? "FAILED" : "SKIPPED";
+      const reason = r.ok === false
+        ? (r.diagnosis ? `${esc(r.diagnosis.title)} — ${esc((r.diagnosis.suggested_fixes || [])[0] || "")}` : esc(r.response_preview || ""))
+        : r.ok === null ? esc(r.skipped_reason || "") : esc(r.response_preview || "");
+      tr.innerHTML = `<td class="mono" style="color:${color}">${label}${r.status_code ? " · " + r.status_code : ""}</td>
+        <td class="mono">${esc(r.method)}</td>
+        <td class="mono truncate">${esc(r.path)}</td>
+        <td class="truncate" style="color:var(--muted)">${reason}</td>`;
+      if (r.event_id) { tr.style.cursor = "pointer"; tr.onclick = () => openEvent(r.event_id); }
+      body.append(tr);
+    });
+};
+
+/* ---------- shell actions ---------- */
+$("#btn-refresh").onclick = () => { refresh(); toast("Refreshed"); };
+$("#btn-purge").onclick = async () => {
+  const ok = await confirmModal({
+    title: "Clear all events?", body: "Deletes every stored event. This cannot be undone.",
+    confirmLabel: "Delete all", danger: true,
+  });
+  if (!ok) return;
+  const r = await api("/purge", { method: "POST" });
+  toast(`Cleared ${r.deleted} events`); refresh();
+};
+
+async function refresh() {
+  if (state.mode === "gateway") {
+    try {
+      if (state.view === "lab" && !targets.length) await loadTargets();
+    } catch (err) { /* gwApi already handles an expired session */ }
+    return;
+  }
+  try {
+    await loadTrace();
+    if (state.view === "overview") await loadOverview();
+    if (state.view === "events") await loadEvents();
+    if (state.view === "issues") await loadIssues();
+    if (state.view === "lab") await loadTargets();
+    if (state.view === "access") await loadAccess();
+    if (state.view === "docgroups") await loadDocGroups();
+    const h = await api("/health");
+    state.gatewayEnabled = !!h.gateway_enabled;
+    $("#nav-btn-access").hidden = !state.gatewayEnabled;
+    $("#nav-btn-docgroups").hidden = !state.gatewayEnabled;
+    document.querySelectorAll('[data-view="audit"]').forEach(el => el.hidden = h.audit_enabled === false);
+    $("#foot-info").innerHTML = `storage ${esc(h.storage)}<br>${esc((h.db_path || "").split("/").slice(-2).join("/"))}<br>${h.targets} targets · ${h.analyzers.length} analyzers`;
+  } catch (err) { $("#foot-info").textContent = "connection lost"; }
+}
+
+/* ---------- API gateway: superadmin, sub-users & the API catalogue ---------- */
+function renderTargetPicker(checkedIds) {
+  buildCategoryPicker($("#gw-target-picker"), checkedIds, {}, { attr: "gw-target" });
+}
+
+async function loadAccess() {
+  if (!targets.length) await loadTargets();
+  // Only build the picker once: the 5s refresh must never wipe ticks or
+  // category text the admin is in the middle of typing.
+  if (!$("#gw-target-picker").children.length) renderTargetPicker([]);
+  const data = await api("/gateway/users");
+  gwUsersCache = data.users || [];
+  $("#nav-gateway-users").textContent = gwUsersCache.length || "";
+  $("#gw-users-count").textContent = gwUsersCache.length;
+  loadApiCatalog();
+}
+let gwUsersCache = [];
+async function openUsersModal() {
+  const data = await api("/gateway/users");
+  gwUsersCache = data.users || [];
+  $("#nav-gateway-users").textContent = gwUsersCache.length || "";
+  $("#gw-users-count").textContent = gwUsersCache.length;
+  openModal(`<h3>Users &amp; access links</h3>
+    <p class="modal-sub">Private users log in with a username and password and only see the APIs you gave them.</p>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th class="mono">label</th><th class="mono">username</th><th class="mono">allowed</th><th class="mono">IPs</th><th class="mono">links</th><th class="mono"></th></tr></thead>
+      <tbody id="gw-users-body"></tbody></table></div>
+    <div id="gw-users-empty"></div>
+    <div class="row-actions" style="justify-content:flex-end;margin-top:18px"><button class="btn-sm" id="modal-cancel">Close</button></div>`);
+  $("#modal-card").classList.add("wide");
+  $("#modal-cancel").onclick = closeModal;
+  fillUsersTable($("#gw-users-body"), $("#gw-users-empty"), gwUsersCache);
+}
+$("#gw-open-users").onclick = openUsersModal;
+function fillUsersTable(body, empty, users) {
+  body.innerHTML = "";
+  empty.innerHTML = users.length ? "" :
+    `<div class="empty"><b>No private users yet</b>Create one to hand out a scoped API login.</div>`;
+  users.forEach(u => {
+    const tr = el("tr");
+    const allowed = u.allowed_target_ids === "*" ? "all APIs" : `${u.allowed_target_ids.length} API(s)`;
+    const ips = u.allowed_ips && u.allowed_ips.length ? u.allowed_ips.join(", ") : "any";
+    tr.innerHTML = `<td>${esc(u.label)}${u.revoked ? ' <span class="tag" style="color:var(--err);border-color:var(--err)">revoked</span>' : ""}</td>
+      <td class="mono" style="color:var(--muted)">${esc(u.username)}</td>
+      <td class="mono" style="color:var(--muted)">${esc(allowed)}</td>
+      <td class="mono" style="color:var(--muted)">${esc(ips)}</td>
+      <td><div class="linkcell">${copyLinkRow(location.origin + MOUNT + "/", "login")}${copyLinkRow(location.origin + MOUNT + "/gw/docs", "docs")}</div></td>
+      <td><div class="row-actions"></div></td>`;
+    const actions = tr.lastElementChild.firstElementChild;
+
+    const editBtn = iconBtn("edit", "Edit access");
+    editBtn.onclick = () => openUserEditModal(u);
+    actions.append(editBtn);
+
+    const resetBtn = iconBtn("key", "Reset password");
+    resetBtn.onclick = async () => {
+      const pw = await promptPasswordModal({ title: `Reset password — ${u.label}`, label: "New password" });
+      if (!pw) { openUsersModal(); return; }
+      const res = await api(`/gateway/users/${u.id}/reset-password`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw }),
+      });
+      if (res.error) { toast(res.error); return; }
+      toast("Password reset — existing sessions signed out");
+      openUsersModal();
+    };
+    actions.append(resetBtn);
+
+    if (u.revoked) {
+      const restoreBtn = iconBtn("play", "Restore access");
+      restoreBtn.onclick = async () => {
+        await api(`/gateway/users/${u.id}/restore`, { method: "POST" });
+        toast("Restored"); openUsersModal();
+      };
+      actions.append(restoreBtn);
+    } else {
+      const revokeBtn = iconBtn("pause", "Revoke access");
+      revokeBtn.onclick = async () => {
+        const ok = await confirmModal({
+          title: "Revoke access?", body: `"${esc(u.label)}" will stop being able to call any API through the gateway. They can be restored later.`,
+          confirmLabel: "Revoke",
+        });
+        if (!ok) { openUsersModal(); return; }
+        await api(`/gateway/users/${u.id}/revoke`, { method: "POST" });
+        toast("Revoked"); openUsersModal();
+      };
+      actions.append(revokeBtn);
+    }
+
+    const deleteBtn = iconBtn("trash", "Delete user", "danger");
+    deleteBtn.onclick = async () => {
+      const ok = await confirmModal({
+        title: "Delete user?", body: `Permanently deletes "${esc(u.label)}". This cannot be undone.`,
+        confirmLabel: "Delete", danger: true,
+      });
+      if (!ok) { openUsersModal(); return; }
+      await api(`/gateway/users/${u.id}`, { method: "DELETE" });
+      toast("Deleted"); openUsersModal();
+    };
+    actions.append(deleteBtn);
+
+    body.append(tr);
+  });
+}
+
+function openUserEditModal(u) {
+  openModal(`
+    <h3>Edit private user</h3>
+    <p class="modal-sub">${esc(u.label)} · ${esc(u.username)}</p>
+    <div class="form modal-grid">
+      <div class="span2">
+        <label>APIs this user can call <span style="color:var(--dim)">· none ticked = every API · edit each API's category and description</span></label>
+        <div id="modal-gw-picker" class="picker-box tall"></div>
+      </div>
+      <div class="span2">
+        <label>Allowed IPs <span style="color:var(--dim)">· one per line — exact IP or CIDR · blank = any</span></label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <textarea id="modal-gw-ips" style="min-height:56px;flex:1"></textarea>
+          <button type="button" class="btn-sm" id="modal-gw-use-my-ip" style="white-space:nowrap;margin-top:1px">Use my IP</button>
+        </div>
+      </div>
+    </div>
+    <div class="row-actions" style="justify-content:flex-end;margin-top:22px">
+      <button class="btn-sm" id="modal-cancel">Cancel</button>
+      <button class="run" id="modal-gw-save" style="margin-top:0">Save changes</button>
+    </div>`);
+  $("#modal-card").classList.add("wide");
+  const picker = $("#modal-gw-picker");
+  buildCategoryPicker(picker, u.allowed_target_ids, u.categories || {}, { attr: "gw-target", describe: true });
+  $("#modal-gw-ips").value = (u.allowed_ips || []).join("\n");
+  $("#modal-gw-use-my-ip").onclick = async () => {
+    const data = await api("/whoami");
+    if (!data.ip) { toast("Could not detect an IP for this connection"); return; }
+    const field = $("#modal-gw-ips");
+    const lines = field.value.split("\n").map(x => x.trim()).filter(Boolean);
+    if (!lines.includes(data.ip)) lines.push(data.ip);
+    field.value = lines.join("\n");
+  };
+  $("#modal-cancel").onclick = () => { closeModal(); openUsersModal(); };
+  $("#modal-gw-save").onclick = async () => {
+    const checked = pickerBoxes(picker, "gw-target").filter(i => i.checked).map(i => i.dataset.gwTarget);
+    const scope = checked.length ? checked : pickerBoxes(picker, "gw-target").map(i => i.dataset.gwTarget);
+    const categories = collectCategoryOverrides(picker, scope);
+    const allowedIps = $("#modal-gw-ips").value.split("\n").map(x => x.trim()).filter(Boolean);
+    const btn = $("#modal-gw-save"); btn.disabled = true; btn.textContent = "saving…";
+    await saveDescriptions(picker);
+    const res = await api(`/gateway/users/${u.id}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allowed_target_ids: checked.length ? checked : "*", allowed_ips: allowedIps, categories }),
+    });
+    btn.disabled = false; btn.textContent = "Save changes";
+    if (res.error) { toast(res.error); return; }
+    toast("User updated");
+    closeModal();
+    loadAccess();
+    openUsersModal();
+  };
+}
+
+$("#gw-use-my-ip").onclick = async () => {
+  const data = await api("/whoami");
+  if (!data.ip) { toast("Could not detect an IP for this connection"); return; }
+  const field = $("#gw-allowed-ips");
+  const lines = field.value.split("\n").map(s => s.trim()).filter(Boolean);
+  if (!lines.includes(data.ip)) lines.push(data.ip);
+  field.value = lines.join("\n");
+  toast(`Added ${data.ip}`);
+};
+
+$("#gw-create-run").onclick = async () => {
+  const checked = pickerBoxes($("#gw-target-picker"), "gw-target").filter(i => i.checked).map(i => i.dataset.gwTarget);
+  const allowedIps = $("#gw-allowed-ips").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const btn = $("#gw-create-run");
+  const label = $("#gw-label").value.trim();
+  const username = $("#gw-username").value.trim();
+  const password = $("#gw-password").value;
+  if (!label || !username || !password) { toast("Label, username, and password are required"); return; }
+  btn.disabled = true; btn.textContent = "creating…";
+  let data;
+  try {
+    data = await api("/gateway/users", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        label, username, password, allowed_target_ids: checked.length ? checked : "*",
+        allowed_ips: allowedIps.length ? allowedIps : null,
+        categories: collectCategoryOverrides($("#gw-target-picker"), checked.length ? checked : pickerBoxes($("#gw-target-picker"), "gw-target").map(i => i.dataset.gwTarget)),
+      }),
+    });
+  } catch (err) { data = { error: String(err) }; }
+  btn.disabled = false; btn.textContent = "Create user";
+  const box = $("#gw-created"); box.innerHTML = "";
+  if (data.error) { toast(data.error); return; }
+  box.innerHTML = `<div class="diag" style="border-left-color:var(--ok)">
+    <div class="lbl">User created</div>
+    <p>"${esc(username)}" logs in at <code class="mono">POST /gw/login</code> with the password you set to get a 1-hour token.</p></div>`;
+  ["#gw-label", "#gw-username", "#gw-password", "#gw-allowed-ips"].forEach(id => { $(id).value = ""; });
+  renderTargetPicker([]);
+  loadAccess();
+};
+
+/* ---------- API catalogue: manually add or hide APIs from the gateway ---------- */
+async function loadApiCatalog() {
+  const [data, issuesData] = await Promise.all([
+    api("/targets?include_disabled=1"),
+    api("/issues?limit=200"),
+  ]);
+  const items = data.targets || [];
+  // Cross-reference each API against grouped failures (see the Issues view)
+  // by method+path — this is what answers "is this one broken, and why"
+  // right in the catalogue, without needing to go dig through Events.
+  const issuesByKey = new Map();
+  (issuesData.issues || []).forEach(i => {
+    if (!i.path) return;
+    const key = `${(i.method || "").toUpperCase()}:${i.path}`;
+    const existing = issuesByKey.get(key);
+    if (!existing || i.last_seen > existing.last_seen) issuesByKey.set(key, i);
+  });
+  const body = $("#cat-body"); body.innerHTML = "";
+  $("#cat-empty").innerHTML = items.length ? "" : `<div class="empty"><b>No APIs yet</b>Install JSCoup on the app, or add one manually above.</div>`;
+  items.forEach(t => {
+    const tr = el("tr");
+    const cls = (t.method || "call").toLowerCase();
+    const url = fullUrl(t);
+    const issue = t.path ? issuesByKey.get(`${(t.method || "").toUpperCase()}:${t.path}`) : null;
+    const healthCell = issue
+      ? `<button type="button" class="link" style="text-align:left;text-decoration:none" title="Click to see every occurrence">
+           <span class="tag" style="color:var(--err);border-color:var(--err)">${issue.count} failing</span>
+           <div style="color:var(--muted);font-size:11.5px;margin-top:3px;max-width:220px">${esc(issue.error_type || "")} — ${esc((issue.error_message || "").slice(0, 80))}</div>
+         </button>`
+      : `<span class="tag" style="color:var(--ok);border-color:var(--ok)">no errors seen</span>`;
+    tr.innerHTML = `<td><span class="mbadge ${esc(cls)}">${esc(t.method || "CALL")}</span></td>
+      <td class="mono" style="color:var(--muted)">${esc(t.path || t.name)}
+        ${url ? `<div style="color:var(--dim);font-size:11px;margin-top:2px">${esc(url)}</div>` : ""}
+        ${t.description ? `<div style="color:var(--dim);font-size:11px;margin-top:2px">${esc(t.description)}</div>` : ""}</td>
+      <td class="mono" style="color:var(--muted)">${esc(t.framework || t.kind)}</td>
+      <td>${t.disabled ? '<span class="tag" style="color:var(--err);border-color:var(--err)">hidden</span>' : '<span class="tag" style="color:var(--ok);border-color:var(--ok)">active</span>'}</td>
+      <td>${healthCell}</td>
+      <td><div class="row-actions"></div></td>`;
+    if (issue) {
+      tr.querySelector(".link").onclick = () => {
+        $("#f-search").value = issue.error_type || t.path;
+        $("#f-status").value = "error";
+        show("events");
+      };
+    }
+    const actions = tr.lastElementChild.firstElementChild;
+    if (url) {
+      const copyBtn = iconBtn("copy", "Copy URL");
+      copyBtn.onclick = () => copyToClipboard(url);
+      actions.append(copyBtn);
+    }
+    const descBtn = iconBtn("edit", "Edit description (shown on the public docs page)");
+    descBtn.onclick = async () => {
+      const value = await promptTextModal({
+        title: "Edit description",
+        label: `${t.method || "CALL"} ${t.path || t.name}`,
+        value: t.description || "",
+        placeholder: "What this API does, and how to use it",
+      });
+      if (value === null) return;
+      await api(`/targets/${encodeURIComponent(t.id)}/description`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: value }),
+      });
+      toast("Description saved");
+      await loadTargets();
+      loadApiCatalog();
+    };
+    actions.append(descBtn);
+    const btn = iconBtn(t.disabled ? "play" : "hide", t.disabled ? "Restore this API" : "Hide this API", t.disabled ? "" : "danger");
+    btn.onclick = async () => {
+      if (t.disabled) {
+        await api(`/targets/${encodeURIComponent(t.id)}/enable`, { method: "POST" });
+        toast("Restored");
+      } else {
+        const ok = await confirmModal({
+          title: "Hide this API?",
+          body: `"${esc(t.path || t.name)}" will no longer be selectable in the gateway or live tester. The real route in your app keeps working.`,
+          confirmLabel: "Hide", danger: true,
+        });
+        if (!ok) return;
+        await api(`/targets/${encodeURIComponent(t.id)}`, { method: "DELETE" });
+        toast("Hidden");
+      }
+      await loadTargets();
+      loadAccess();
+    };
+    actions.append(btn);
+    body.append(tr);
+  });
+}
+
+$("#cat-add-run").onclick = async () => {
+  const method = $("#cat-method").value;
+  const path = $("#cat-path").value.trim();
+  const description = $("#cat-desc").value.trim();
+  if (!path.startsWith("/")) { toast("Path must start with \"/\""); return; }
+  const btn = $("#cat-add-run"); btn.disabled = true; btn.textContent = "adding…";
+  const res = await api("/targets", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ method, path, description }),
+  });
+  btn.disabled = false; btn.textContent = "Add API";
+  if (res.error) { toast(res.error); return; }
+  $("#cat-path").value = ""; $("#cat-desc").value = "";
+  toast("API added to the catalogue");
+  await loadTargets();
+  loadAccess();
+};
+/* ---------- public API-doc groups ---------- */
+// The same "which category does this belong to" rule the docs page groups
+// by: an explicit tag from the source code wins; otherwise fall back to the
+// first meaningful path segment (skipping a bare "api" prefix) so routes
+// still land in a sensible bucket instead of one giant undifferentiated pile.
+function defaultCategory(t) {
+  if (t.tags && t.tags[0]) return t.tags[0];
+  const segments = (t.path || "").split("/").filter(Boolean).filter(s => !/^[{<]/.test(s));
+  const first = segments[0] === "api" ? segments[1] : segments[0];
+  return first || t.framework || "general";
+}
+
+// Shared by the "Publish a group" form and the edit modal: a categorized,
+// checkable list of every publishable API. Each checked item also gets a
+// searchable category field to override which category it's filed under
+// *in this group* — leave it blank to keep the default (tag, or path prefix).
+// Every category currently in use anywhere — the auto-derived default for
+// each API, plus every override any published group already uses — so the
+// category field can offer real, previously-used choices instead of an
+// empty box, while still accepting a brand-new one typed in.
+function knownCategories() {
+  const set = new Set(targets.map(defaultCategory));
+  (docGroupsCache || []).forEach(g => Object.values(g.categories || {}).forEach(c => set.add(c)));
+  return [...set].filter(Boolean).sort();
+}
+function refreshCategoryDatalist() {
+  $("#known-categories-list").innerHTML = knownCategories().map(c => `<option value="${esc(c)}">`).join("");
+}
+
+function pickerBoxes(container, attr) { return [...container.querySelectorAll(`input[type=checkbox][data-${attr}]`)]; }
+function buildCategoryPicker(container, checkedIds, categoryOverrides, opts) {
+  opts = opts || {};
+  const attr = opts.attr || "dg-target";
+  const prop = attr.replace(/-(\w)/g, (_, c) => c.toUpperCase());
+  const withCategories = opts.categories !== false;
+  const allChecked = checkedIds === "*";
+  container.innerHTML = "";
+  const bar = el("div", "picker-bar");
+  const search = el("input"); search.type = "search"; search.placeholder = "Search APIs…";
+  const cnt = el("span", "cnt");
+  const btnAll = el("button", "btn-sm", "Select all"); btnAll.type = "button";
+  const btnNone = el("button", "btn-sm", "Clear"); btnNone.type = "button";
+  bar.append(search, btnAll, btnNone, cnt);
+  container.append(bar);
+  const updateCount = () => {
+    const boxes = pickerBoxes(container, attr);
+    cnt.textContent = `${boxes.filter(b => b.checked).length} / ${boxes.length} selected`;
+    container.querySelectorAll(".tag-group").forEach(g => {
+      const bs = [...g.querySelectorAll(`input[type=checkbox][data-${attr}]`)];
+      const btn = g.querySelector(".cat-toggle");
+      if (btn) btn.textContent = bs.length && bs.every(b => b.checked) ? "Clear category" : "Select category";
+    });
+  };
+  btnAll.onclick = () => { pickerBoxes(container, attr).forEach(b => { if (!b.closest("[hidden]")) b.checked = true; }); updateCount(); };
+  btnNone.onclick = () => { pickerBoxes(container, attr).forEach(b => { b.checked = false; }); updateCount(); };
+  search.oninput = () => {
+    const q = search.value.trim().toLowerCase();
+    container.querySelectorAll(".api-row").forEach(r => { r.hidden = !!q && !r.textContent.toLowerCase().includes(q) && !(r.dataset.search || "").includes(q); });
+    container.querySelectorAll(".tag-group").forEach(g => { g.hidden = !!q && ![...g.querySelectorAll(".api-row")].some(r => !r.hidden); });
+  };
+  container.addEventListener("change", ev => { if (ev.target.matches && ev.target.matches(`input[type=checkbox][data-${attr}]`)) updateCount(); });
+  refreshCategoryDatalist();
+  const byCategory = new Map();
+  targets.forEach(t => {
+    const cat = defaultCategory(t);
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat).push(t);
+  });
+  [...byCategory.keys()].sort().forEach(cat => {
+    const items = byCategory.get(cat);
+    const group = el("div", "tag-group");
+    const header = el("button", "tag-header");
+    header.type = "button";
+    header.innerHTML = `<span>${esc(cat)} <span class="n">${items.length}</span></span><span class="arrow">&#9660;</span>`;
+    header.onclick = () => group.classList.toggle("collapsed");
+    const headRow = el("div", "tag-head-row");
+    const catToggle = el("button", "btn-sm cat-toggle", "Select category"); catToggle.type = "button";
+    catToggle.onclick = () => {
+      const bs = [...group.querySelectorAll(`input[type=checkbox][data-${attr}]`)].filter(b => !b.closest("[hidden]"));
+      const every = bs.every(b => b.checked);
+      bs.forEach(b => { b.checked = !every; });
+      updateCount();
+    };
+    headRow.append(header, catToggle);
+    const body = el("div", "tag-body");
+    items.forEach(t => {
+      const row = el("div", "api-row");
+      row.dataset.search = ((t.description || "") + " " + (t.name || "")).toLowerCase();
+      const main = el("div", "api-row-main");
+      const checked = allChecked || (checkedIds || []).includes(t.id);
+      main.innerHTML = `<label>
+        <input type="checkbox" data-${attr}="${esc(t.id)}" style="width:auto;flex-shrink:0" ${checked ? "checked" : ""}>
+        <span class="mbadge ${esc((t.method || "call").toLowerCase())}" style="flex-shrink:0">${esc(t.method || "CALL")}</span>
+        <span class="path">${esc(t.path || t.name)}</span>
+      </label>`;
+      row.append(main);
+      if (!withCategories) { body.append(row); return; }
+      row.classList.add("compact");
+      const catInput = el("input", "category-input");
+      catInput.type = "text";
+      catInput.setAttribute("list", "known-categories-list");
+      catInput.dataset.dgCategory = t.id;
+      catInput.value = (categoryOverrides || {})[t.id] || "";
+      catInput.placeholder = cat + " (default)";
+      catInput.title = "Search an existing category or type a new one — leave blank to use the default";
+      main.append(catInput);
+      if (opts.describe) {
+        const d = el("input", "desc-input");
+        d.type = "text"; d.dataset.descFor = t.id; d.dataset.orig = t.description || "";
+        d.value = t.description || "";
+        d.placeholder = "Description — what this API does and how to use it";
+        row.append(d);
+      }
+      body.append(row);
+    });
+    group.append(headRow, body);
+    container.append(group);
+  });
+  updateCount();
+}
+async function saveDescriptions(container) {
+  const changed = [...container.querySelectorAll("input[data-desc-for]")].filter(i => i.value.trim() !== (i.dataset.orig || "").trim());
+  for (const i of changed) {
+    const value = i.value.trim();
+    await api(`/targets/${encodeURIComponent(i.dataset.descFor)}/description`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ description: value }),
+    });
+    const t = targets.find(x => x.id === i.dataset.descFor); if (t) t.description = value;
+  }
+  return changed.length;
+}
+function copyLinkRow(url, label) {
+  return `<div class="lk"><span style="color:var(--dim)">${esc(label)}</span><code class="mono" title="${esc(url)}">${esc(url)}</code><button type="button" class="btn-sm" data-copy="${esc(url)}">Copy</button></div>`;
+}
+document.addEventListener("click", ev => {
+  const b = ev.target.closest && ev.target.closest("button[data-copy]");
+  if (b) copyToClipboard(b.dataset.copy);
+});
+function collectCategoryOverrides(container, checkedIds) {
+  const categories = {};
+  container.querySelectorAll("[data-dg-category]").forEach(inp => {
+    const value = inp.value.trim();
+    if (value && (checkedIds || []).includes(inp.dataset.dgCategory)) categories[inp.dataset.dgCategory] = value;
+  });
+  return categories;
+}
+let docGroupsMount = "";
+async function loadDocGroups() {
+  if (!targets.length) await loadTargets();
+  if (!$("#dg-target-picker").children.length) buildCategoryPicker($("#dg-target-picker"), [], {});
+  const data = await api("/doc-groups");
+  docGroupsCache = data.groups || [];
+  docGroupsMount = data.mount_path;
+  refreshCategoryDatalist();
+  $("#nav-docgroups").textContent = docGroupsCache.length || "";
+  $("#dg-groups-count").textContent = docGroupsCache.length;
+}
+async function openGroupsModal() {
+  await loadDocGroups();
+  openModal(`<h3>Groups &amp; public links</h3>
+    <p class="modal-sub">Anyone with a link can open the page — limited only by the IPs you set.</p>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th class="mono">slug</th><th class="mono">title</th><th class="mono">APIs</th><th class="mono">access</th><th class="mono">public link</th><th class="mono"></th></tr></thead>
+      <tbody id="dg-body"></tbody></table></div>
+    <div id="dg-empty"></div>
+    <div class="row-actions" style="justify-content:flex-end;margin-top:18px"><button class="btn-sm" id="modal-cancel">Close</button></div>`);
+  $("#modal-card").classList.add("wide");
+  $("#modal-cancel").onclick = closeModal;
+  const body = $("#dg-body");
+  $("#dg-empty").innerHTML = docGroupsCache.length ? "" :
+    `<div class="empty"><b>No groups published yet</b>Tick some APIs and publish one.</div>`;
+  docGroupsCache.forEach(g => {
+    const tr = el("tr");
+    const url = `${location.origin}${docGroupsMount}/${g.slug}`;
+    const access = g.allowed_ips && g.allowed_ips.length
+      ? `${g.allowed_ips.length} IP${g.allowed_ips.length === 1 ? "" : "s"}`
+      : "everyone (0.0.0.0)";
+    tr.innerHTML = `<td class="mono">${esc(g.slug)}</td>
+      <td>${esc(g.title)}</td>
+      <td class="mono" style="color:var(--muted)">${g.target_ids.length}</td>
+      <td>${esc(access)}</td>
+      <td><div class="linkcell">${copyLinkRow(url, "public")}</div></td>
+      <td><div class="row-actions"></div></td>`;
+    const actions = tr.lastElementChild.firstElementChild;
+    const editBtn = iconBtn("edit", "Edit group");
+    editBtn.onclick = () => openDocGroupEditModal(g);
+    actions.append(editBtn);
+    const deleteBtn = iconBtn("trash", "Unpublish group", "danger");
+    deleteBtn.onclick = async () => {
+      const ok = await confirmModal({
+        title: "Unpublish this group?",
+        body: `"${esc(g.title)}" will no longer be reachable at <code class="mono">${esc(url)}</code>.`,
+        confirmLabel: "Unpublish", danger: true,
+      });
+      if (!ok) { openGroupsModal(); return; }
+      await api(`/doc-groups/${encodeURIComponent(g.slug)}`, { method: "DELETE" });
+      toast("Unpublished");
+      openGroupsModal();
+    };
+    actions.append(deleteBtn);
+    body.append(tr);
+  });
+}
+$("#dg-open-groups").onclick = openGroupsModal;
+// Editing a published group happens entirely in a modal — everything about
+// it (title, which APIs, each one's category, allowed IPs) in one place,
+// saved straight to the database behind /api/doc-groups/<slug>.
+function openDocGroupEditModal(g) {
+  openModal(`
+    <h3>Edit group</h3>
+    <p class="modal-sub">${esc(g.title)}</p>
+    <div class="form modal-grid">
+      <div><label>Title</label><input id="modal-dg-title" value="${esc(g.title)}"></div>
+      <div><label>Slug <span style="color:var(--dim)">· fixed after publishing</span></label><input value="${esc(g.slug)}" disabled></div>
+      <div class="span2">
+        <label>APIs in this group <span style="color:var(--dim)">· edit each API's category and description</span></label>
+        <div id="modal-dg-picker" class="picker-box tall"></div>
+      </div>
+      <div class="span2">
+        <label style="display:flex;align-items:center;gap:8px;margin-top:16px">
+          <input type="checkbox" id="modal-dg-public-all" style="width:auto"> Public to everyone (0.0.0.0)
+        </label>
+      </div>
+      <div class="span2">
+        <label>Allowed IPs <span style="color:var(--dim)">· one per line — exact IP or CIDR</span></label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <textarea id="modal-dg-ips" style="min-height:64px;flex:1"></textarea>
+          <button type="button" class="btn-sm" id="modal-dg-use-my-ip" style="white-space:nowrap;margin-top:1px">Use my IP</button>
+        </div>
+      </div>
+    </div>
+    <div class="row-actions" style="justify-content:flex-end;margin-top:22px">
+      <button class="btn-sm" id="modal-cancel">Cancel</button>
+      <button class="run" id="modal-dg-save" style="margin-top:0">Save changes</button>
+    </div>`);
+  $("#modal-card").classList.add("wide");
+  const picker = $("#modal-dg-picker");
+  buildCategoryPicker(picker, g.target_ids, g.categories || {}, { describe: true });
+  const isPublic = !g.allowed_ips || !g.allowed_ips.length;
+  $("#modal-dg-public-all").checked = isPublic;
+  $("#modal-dg-ips").value = (g.allowed_ips || []).join("\n");
+  $("#modal-dg-ips").disabled = isPublic;
+  $("#modal-dg-public-all").onchange = () => { $("#modal-dg-ips").disabled = $("#modal-dg-public-all").checked; };
+  $("#modal-dg-use-my-ip").onclick = async () => {
+    const data = await api("/whoami");
+    if (!data.ip) { toast("Could not detect an IP for this connection"); return; }
+    const field = $("#modal-dg-ips");
+    const lines = field.value.split("\n").map(s => s.trim()).filter(Boolean);
+    if (!lines.includes(data.ip)) lines.push(data.ip);
+    field.value = lines.join("\n");
+  };
+  $("#modal-cancel").onclick = () => { closeModal(); openGroupsModal(); };
+  $("#modal-dg-save").onclick = async () => {
+    const checked = [...picker.querySelectorAll("input[type=checkbox]:checked")].map(i => i.dataset.dgTarget);
+    if (!checked.length) { toast("Pick at least one API for this group"); return; }
+    const title = $("#modal-dg-title").value.trim();
+    if (!title) { toast("Title is required"); return; }
+    const isPublicNow = $("#modal-dg-public-all").checked;
+    const allowedIps = isPublicNow ? [] : $("#modal-dg-ips").value.split("\n").map(s => s.trim()).filter(Boolean);
+    const categories = collectCategoryOverrides(picker, checked);
+    const btn = $("#modal-dg-save"); btn.disabled = true; btn.textContent = "saving…";
+    await saveDescriptions(picker);
+    const res = await api(`/doc-groups/${encodeURIComponent(g.slug)}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, target_ids: checked, allowed_ips: allowedIps, categories }),
+    });
+    btn.disabled = false; btn.textContent = "Save changes";
+    if (res.error) { toast(res.error); return; }
+    closeModal();
+    toast("Group updated");
+    openGroupsModal();
+  };
+}
+$("#dg-public-all").onchange = () => { $("#dg-allowed-ips").disabled = $("#dg-public-all").checked; };
+$("#dg-use-my-ip").onclick = async () => {
+  const data = await api("/whoami");
+  if (!data.ip) { toast("Could not detect an IP for this connection"); return; }
+  const field = $("#dg-allowed-ips");
+  const lines = field.value.split("\n").map(s => s.trim()).filter(Boolean);
+  if (!lines.includes(data.ip)) lines.push(data.ip);
+  field.value = lines.join("\n");
+  toast(`Added ${data.ip}`);
+};
+$("#dg-create-run").onclick = async () => {
+  const picker = $("#dg-target-picker");
+  const checked = [...picker.querySelectorAll("input[type=checkbox]:checked")].map(i => i.dataset.dgTarget);
+  const title = $("#dg-title").value.trim();
+  const isPublic = $("#dg-public-all").checked;
+  const allowedIps = isPublic ? [] : $("#dg-allowed-ips").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const categories = collectCategoryOverrides(picker, checked);
+  if (!title) { toast("Title is required"); return; }
+  if (!checked.length) { toast("Pick at least one API for this group"); return; }
+  const slug = $("#dg-slug").value.trim().toLowerCase();
+  if (!slug) { toast("Slug is required"); return; }
+  const btn = $("#dg-create-run");
+  btn.disabled = true; btn.textContent = "publishing…";
+  const res = await api("/doc-groups", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      slug, title, target_ids: checked, allowed_ips: allowedIps.length ? allowedIps : null,
+      categories: Object.keys(categories).length ? categories : null,
+    }),
+  });
+  btn.disabled = false; btn.textContent = "Publish group";
+  if (res.error) { toast(res.error); return; }
+  toast("Group published");
+  $("#dg-slug").value = ""; $("#dg-title").value = "";
+  $("#dg-public-all").checked = false;
+  $("#dg-allowed-ips").value = ""; $("#dg-allowed-ips").disabled = false;
+  buildCategoryPicker(picker, [], {});
+  loadDocGroups();
+};
+
+async function boot() {
+  let gwToken = null;
+  try { gwToken = sessionStorage.getItem("jscoup-gw-token"); } catch { /* private mode */ }
+  if (gwToken) {
+    try {
+      const r = await fetch(MOUNT + "/gw/my-targets", { headers: { Authorization: "Bearer " + gwToken } });
+      if (r.ok) {
+        const data = await r.json();
+        state.gwToken = gwToken;
+        enterGatewayMode(data.user);
+        return;
+      }
+    } catch { /* network error — fall through to the admin login */ }
+    try { sessionStorage.removeItem("jscoup-gw-token"); } catch { /* private mode */ }
+  }
+  state.mode = "admin";
+  refresh(); loadTargets();
+}
+initTokenBar();
+boot();
+state.timer = setInterval(() => { if (!$("#drawer").classList.contains("open")) refresh(); }, 5000);
+</script>
+</body>
+</html>
