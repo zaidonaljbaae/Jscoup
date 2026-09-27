@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+
+jobs:
+  test-matrix:
+    name: py${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: jscoup
+          POSTGRES_PASSWORD: jscoup
+          POSTGRES_DB: jscoup
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U jscoup"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      mongo:
+        image: mongo:7
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: python -m pip install -e ".[dev]" psycopg2-binary "psycopg[binary]"
+
+      - name: Run test suite (SQLite, Memory, and mocked backends)
+        run: pytest -q
+
+      - name: Run test suite again against a real Postgres and a real MongoDB
+        env:
+          JSCOUP_TEST_PG_URL: postgresql+psycopg2://jscoup:jscoup@localhost:5432/jscoup
+          JSCOUP_TEST_MONGO_URL: mongodb://localhost:27017
+          JSCOUP_REQUIRE_REAL_SERVERS: "1"
+        run: pytest -q -m real_server
+
+  multi-worker-boot-race:
+    # Regression test for the exact bug found while building three demo
+    # apps around this library: SqlStorage.__init__ (and, transitively,
+    # JSCoup(storage=...)) racing on first boot when several worker
+    # processes construct it against the same fresh database at once
+    # (e.g. `gunicorn -w 2` without --preload). See storage/sql.py's
+    # create_all try/except for the fix.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: jscoup
+          POSTGRES_PASSWORD: jscoup
+          POSTGRES_DB: jscoup
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U jscoup"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[dev]" psycopg2-binary "psycopg[binary]"
+      - name: Boot 8 processes against the same fresh Postgres at once
+        env:
+          JSCOUP_TEST_PG_URL: postgresql+psycopg2://jscoup:jscoup@localhost:5432/jscoup
+        run: python tests/tools/concurrent_boot.py

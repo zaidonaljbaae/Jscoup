@@ -1,0 +1,15 @@
+........................................................................ [ 13%]
+........................................................................ [ 27%]
+........................................................................ [ 41%]
+........................................................................ [ 55%]
+...............................................................s........ [ 69%]
+.......through the real stream...........................s..................................... [ 83%]
+........................................................................ [ 97%]
+.......s.......                                                          [100%]
+=============================== warnings summary ===============================
+tests/test_examples_calllog.py::test_fastapi_call_log_retains_metadata_only
+  /workspace/scratch/4f4752f2ec48/review_230/venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+516 passed, 3 skipped, 1 warning in 95.87s (0:01:35)

@@ -1,0 +1,15 @@
+# Development / test dependencies for the JSCoup library itself.
+# The library has no required runtime dependencies at all — everything below
+# is optional at runtime and only needed to run the full test suite locally.
+pytest>=7.4
+Flask>=2.2
+fastapi>=0.100
+Django>=4.0
+uvicorn>=0.23
+httpx>=0.24
+SQLAlchemy>=2.0
+cryptography>=41
+pymongo>=4.0
+mongomock>=4.1
+paramiko>=3.2
+PyYAML>=6.0

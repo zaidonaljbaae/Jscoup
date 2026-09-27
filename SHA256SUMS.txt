@@ -1,0 +1,4 @@
+# JSCOUP 1.0.0 — release artifact checksums
+# Regenerated 2026-09-27T02:00:20Z
+1e6c91f8f1ab5e895513e5a91b70b6fa9bb4ff6059d7ade3e0beea9b271e2d46 *dist/jscoup-1.0.0-py3-none-any.whl
+1bc0067cfb008b9a15a5883def68798815af152a299dc389c419128193983c28 *dist/jscoup-1.0.0.tar.gz

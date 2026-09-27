@@ -1,0 +1,38 @@
+{
+  "python": "3.12.14",
+  "calls": 10000,
+  "producer_seconds": 2.4345057919999817,
+  "producer_calls_per_second": 4107.609861870509,
+  "total_seconds": 2.4724565849996907,
+  "flushed": true,
+  "stored_rows": 4296,
+  "metrics": {
+    "before_store_failures": 0,
+    "storage_failures": 0,
+    "call_log_publisher": {
+      "accepted": 4296,
+      "saved": 4296,
+      "dropped": 5704,
+      "failed": 0,
+      "callback_failed": 0,
+      "pending": 0,
+      "capacity": 4096,
+      "pending_bytes": 0,
+      "max_bytes": 16777216,
+      "closed": false
+    },
+    "publisher": {
+      "accepted": 0,
+      "saved": 0,
+      "dropped": 0,
+      "failed": 0,
+      "callback_failed": 0,
+      "pending": 0,
+      "capacity": 4096,
+      "pending_bytes": 0,
+      "max_bytes": 16777216,
+      "closed": false
+    }
+  },
+  "scope": "Single-process synthetic metadata capture; not HTTP throughput or a capacity SLA"
+}

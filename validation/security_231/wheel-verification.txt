@@ -1,0 +1,5 @@
+Built wheel installed with --no-deps in a fresh isolated environment.
+Version 2.3.1rc1 imported successfully.
+MemoryStorage capture and metadata logging, dashboard HTML response, and close smoke checks passed.
+47 Python and HTML distribution files matched staged source byte-for-byte.
+Framework extras and optional database services require their corresponding dependencies.

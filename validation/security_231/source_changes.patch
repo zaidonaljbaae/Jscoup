@@ -1,0 +1,1401 @@
+--- a/jscoup/__init__.py
++++ b/jscoup/__init__.py
+@@ -63,7 +63,7 @@
+ from .simulator import Simulator
+ from .storage import BaseStorage, MemoryStorage, SQLiteStorage
+ 
+-__version__ = "2.3.0"
++__version__ = "2.3.1rc1"
+ __author__ = "Zaidon Aljbaae"
+ 
+ __all__ = [
+--- a/jscoup/calllog.py
++++ b/jscoup/calllog.py
+@@ -14,6 +14,7 @@
+ from __future__ import annotations
+ 
+ import os
++from .security import private_file
+ import sqlite3
+ import threading
+ import time
+@@ -41,15 +42,20 @@
+ 
+ 
+ class CallLogStore:
+-    def __init__(self, db_path: str = ".jscoup/call_log.db"):
++    def __init__(self, db_path: str = ".jscoup/call_log.db", max_rows: int = 100000):
++        self.max_rows = max_rows
+         self.db_path = os.path.abspath(db_path)
+         directory = os.path.dirname(self.db_path)
+         if directory:
+-            os.makedirs(directory, exist_ok=True)
++            os.makedirs(directory, mode=0o700, exist_ok=True)
++        private_file(self.db_path)
+         self._local = threading.local()
+         self._lock = threading.Lock()
+         with self._lock:
+             self.conn.executescript(SCHEMA)
++            # Remove sensitive legacy columns from the active database. Old
++            # backups/free pages require the operator's retention procedure.
++            self.conn.execute("UPDATE call_log SET response_preview = NULL, actor = NULL WHERE response_preview IS NOT NULL OR actor IS NOT NULL")
+             self.conn.commit()
+ 
+     @property
+@@ -59,6 +65,7 @@
+             conn = sqlite3.connect(self.db_path, timeout=10, check_same_thread=False)
+             conn.row_factory = sqlite3.Row
+             conn.execute("PRAGMA journal_mode=WAL")
++            private_file(self.db_path)
+             self._local.conn = conn
+         return conn
+ 
+@@ -81,15 +88,30 @@
+         actor: Optional[str],
+         response_preview: Optional[str],
+     ) -> None:
+-        preview = response_preview[:_MAX_PREVIEW] if response_preview else None
+-        with self._lock:
+-            self.conn.execute(
+-                "INSERT INTO call_log (ts, kind, name, method, path, status_code, ok, duration_ms, actor, "
+-                "response_preview) VALUES (?,?,?,?,?,?,?,?,?,?)",
+-                (time.time(), kind, name, method, path, status_code, 1 if ok else 0,
+-                 duration_ms, actor, preview),
+-            )
+-            self.conn.commit()
++        self.record_many([dict(kind=kind, name=name, method=method, path=path,
++                               status_code=status_code, ok=ok, duration_ms=duration_ms,
++                               actor=actor, response_preview=response_preview)])
++
++    def record_many(self, rows):
++        """Commit a bounded batch with one retention check and transaction."""
++        values = []
++        for row in rows:
++            values.append((time.time(), str(row['kind'])[:64], str(row['name'])[:512],
++                           str(row['method'])[:16] if row.get('method') else None,
++                           str(row['path'])[:512] if row.get('path') else None,
++                           row.get('status_code'), 1 if row['ok'] else 0,
++                           row.get('duration_ms'), None, None))
++        with self._lock:
++            try:
++                self.conn.executemany(
++                    "INSERT INTO call_log (ts, kind, name, method, path, status_code, ok, duration_ms, actor, response_preview) VALUES (?,?,?,?,?,?,?,?,?,?)",
++                    values,
++                )
++                self.conn.execute("DELETE FROM call_log WHERE id <= (SELECT id FROM call_log ORDER BY id DESC LIMIT 1 OFFSET ?)", (self.max_rows,))
++                self.conn.commit()
++            except BaseException:
++                self.conn.rollback()
++                raise
+ 
+     def recent(
+         self, limit: int = 100, offset: int = 0, name: Optional[str] = None, ok: Optional[bool] = None,
+@@ -181,3 +203,24 @@
+             cur = self.conn.execute("DELETE FROM call_log WHERE ts < ?", (cutoff_ts,))
+             self.conn.commit()
+         return cur.rowcount
++
++
++class CallLogSink:
++    """Publisher adapter; closes the writer thread's own SQLite connection."""
++    def __init__(self, store, retention_days=30):
++        self.retention_days = retention_days
++        self.store = store
++        self._last_purge = 0
++    def save(self, row):
++        self.store.record(**row)
++        self._purge()
++    def save_batch(self, rows):
++        self.store.record_many(rows)
++        self._purge()
++    def _purge(self):
++        if time.monotonic() - self._last_purge > 3600:
++            self._last_purge = time.monotonic()
++            if self.retention_days > 0:
++                self.store.purge_older_than(time.time() - self.retention_days * 86400)
++    def close(self):
++        self.store.close()
+--- a/jscoup/config.py
++++ b/jscoup/config.py
+@@ -76,7 +76,7 @@
+     # shared across worker processes without a shared signing secret.
+     dashboard_session_db_path: str = ".jscoup/dashboard_sessions.db"
+     dashboard_session_hours: float = 12.0
+-    dashboard_cookie_secure: bool = False
++    dashboard_cookie_secure: Optional[bool] = None
+     dashboard_login_max_attempts: int = 5
+     dashboard_login_lockout_seconds: float = 300.0
+     # Network-level gate, checked before login: None/[] means unrestricted.
+@@ -101,6 +101,7 @@
+     # default; set call_log_enabled=False to turn it off entirely. Rows older
+     # than call_log_retention_days are deleted automatically (0 = keep forever).
+     call_log_enabled: bool = True
++    call_log_max_rows: int = 100000
+     call_log_retention_days: int = 30
+     call_log_db_path: str = ".jscoup/call_log.db"
+ 
+@@ -157,6 +158,9 @@
+ 
+     # live simulation
+     base_url: Optional[str] = None  # used when the dashboard replays HTTP targets
++    dashboard_max_body_bytes: int = 16 * 1024 * 1024
++    invoke_max_concurrency: int = 8
++    invoke_max_response_bytes: int = 2 * 1024 * 1024
+     invoke_timeout: float = 30.0
+     # A live-invoke call may only replay against `base_url` unless its
+     # destination is also listed here; prevents /api/invoke from becoming an
+@@ -164,6 +168,10 @@
+     allowed_base_urls: List[str] = field(default_factory=list)
+ 
+     def __post_init__(self):
++        if self.dashboard_cookie_secure is None:
++            self.dashboard_cookie_secure = self.environment.lower() not in {"local", "development", "dev", "test", "testing"}
++        if min(self.dashboard_max_body_bytes, self.invoke_max_response_bytes, self.call_log_max_rows, self.gateway_rate_limit, self.gateway_rate_window, self.invoke_timeout, self.invoke_max_concurrency) <= 0:
++            raise ValueError("Security limits must be positive")
+         if not 0 <= self.sample_rate <= 1:
+             raise ValueError("sample_rate must be between 0 and 1")
+         if self.event_queue_size < 1 or self.max_queries < 0:
+@@ -176,5 +184,7 @@
+ 
+     def merged(self, **overrides: Any) -> "JSCoupConfig":
+         data = {f: getattr(self, f) for f in self.__dataclass_fields__}  # type: ignore[attr-defined]
++        if "environment" in overrides and "dashboard_cookie_secure" not in overrides:
++            data["dashboard_cookie_secure"] = None
+         data.update({k: v for k, v in overrides.items() if v is not None})
+         return JSCoupConfig(**data)
+--- a/jscoup/core.py
++++ b/jscoup/core.py
+@@ -104,6 +104,9 @@
+                 f"[jscoup] Pass dashboard_password=... to JSCoup(...) to set your own instead."
+             )
+         import hashlib
++        import threading
++        self._aux_lock = threading.RLock()
++        self._initial_password_hash = self.config.dashboard_password_hash
+         credential = dashboard_password or self.config.dashboard_password_hash or ""
+         self._auth_credential_id = hashlib.pbkdf2_hmac("sha256", credential.encode(), b"jscoup-auth-realm-v1", 260000).hex() if credential else ""
+         self.storage: BaseStorage = storage or SQLiteStorage(
+@@ -129,8 +132,11 @@
+         self.project_config: Optional[Any] = None  # set by JSCoup.from_config_file()
+         from .publisher import EventPublisher
+         self._publisher = EventPublisher(self.storage, self.config.event_queue_size, self.config.on_event) if self.config.async_storage else None
++        self._closed = False
+         self._storage_failures = 0
+         self._before_store_failures = 0  # observable counter — see _store()
++        if self.config.async_storage and self.config.call_log_enabled:
++            self._call_publisher  # allocate SQLite state at startup, not on the request path
+         if self.config.capture_print:
+             from .printcapture import install_print_capture
+ 
+@@ -138,21 +144,48 @@
+ 
+     def flush(self, timeout: float = 5.0) -> bool:
+         """Wait for accepted queued events. False means work remains."""
+-        return self._publisher.flush(timeout) if self._publisher else True
++        deadline = time.monotonic() + timeout
++        events = self._publisher.flush(timeout) if self._publisher else True
++        calls = self._call_writer.flush(max(0, deadline-time.monotonic())) if hasattr(self, "_call_writer") else True
++        return events and calls
+ 
+     def close(self, timeout: float = 5.0) -> bool:
+-        """Stop accepting queued events and flush within the deadline."""
+-        if self._publisher:
+-            complete = self._publisher.close(timeout)
+-            if complete:self.storage.close()
+-            return complete
+-        self.storage.close()
+-        return True
++        """Flush background work and close this thread's local connections."""
++        self._closed = True
++        deadline = time.monotonic() + timeout
++        complete = self._publisher.close(timeout) if self._publisher else True
++        if hasattr(self, "_call_writer"):
++            complete = self._call_writer.close(max(0, deadline-time.monotonic())) and complete
++        if complete:
++            self.storage.close()
++            for name in ("_call_log", "_gateway"):
++                store = getattr(self, name, None)
++                if store is not None:
++                    store.close()
++            if hasattr(self, "_dashboard") and hasattr(self._dashboard, "_session_store"):
++                self._dashboard._session_store.close()
++        return complete
+ 
+     def metrics(self) -> dict:
+         return {"before_store_failures":self._before_store_failures,
+                 "storage_failures":self._storage_failures,
++                "call_log_publisher":self._call_writer.metrics() if hasattr(self, "_call_writer") else None,
+                 "publisher":self._publisher.metrics() if self._publisher else None}
++
++    def rotate_dashboard_credentials(self, password, credential_epoch):
++        """Revoke current sessions; deploy the same password/epoch to all workers.
++
++        Epoch is a required operator-controlled version, not a per-worker random value.
++        """
++        from .dashboard.auth import hash_password
++        import hashlib
++        with self._aux_lock:
++            self.dashboard._sessions.revoke_all()
++            self.config.dashboard_password_hash = hash_password(password)
++            self.config.credential_epoch = str(credential_epoch)
++            self._initial_password_hash = self.config.dashboard_password_hash
++            self._auth_credential_id = hashlib.pbkdf2_hmac("sha256", password.encode(), b"jscoup-auth-realm-v1", 260000).hex()
++            self.dashboard._sessions  # rebind the local store immediately
+ 
+     @classmethod
+     def high_volume(cls, service_name="service", **options):
+@@ -352,16 +385,15 @@
+         Both ``capture()`` and ``end()`` funnel through here, so the
+         ``enabled`` flag only needs to be checked in this one place.
+         """
+-        if not self.config.enabled or ctx.suppressed:
++        if self._closed or not self.config.enabled or ctx.suppressed:
+             return None
+-        self._record_call_log(ctx, exception)
+         try:
+-            event = self._build_event(ctx, exception)
++            event = self._build_event(ctx, exception, include_success=True)
+         except Exception:  # capture must never break the host application
+             return None
+         if event is None:
+             return None
+-        return self._store(event)
++        return self._store(event, record_call=True)
+ 
+     def record_exception(
+         self,
+@@ -931,54 +963,59 @@
+     def dashboard(self):
+         from .dashboard.api import DashboardAPI
+ 
+-        if not hasattr(self, "_dashboard"):
+-            self._dashboard = DashboardAPI(self)
+-        return self._dashboard
++        with self._aux_lock:
++            if not hasattr(self, "_dashboard"):
++                self._dashboard = DashboardAPI(self)
++            return self._dashboard
+ 
+     @property
+     def gateway(self):
+         """Lazily-built :class:`~jscoup.gateway.GatewayStore`."""
+         from .gateway import GatewayStore
+ 
+-        if not hasattr(self, "_gateway"):
+-            self._gateway = GatewayStore(
+-                self.config.gateway_db_path, token_ttl_hours=self.config.gateway_token_ttl_hours
+-            )
+-        return self._gateway
++        with self._aux_lock:
++            if not hasattr(self, "_gateway"):
++                self._gateway = GatewayStore(
++                    self.config.gateway_db_path, token_ttl_hours=self.config.gateway_token_ttl_hours,
++                    realm=str(self.config.auth_realm_id or (self.config.service_name, self.config.environment)),
++                    encryption_key=self.config.encryption_key
++                )
++            return self._gateway
+ 
+     @property
+     def call_log(self):
+         """Lazily-built :class:`~jscoup.calllog.CallLogStore`."""
+         from .calllog import CallLogStore
+ 
+-        if not hasattr(self, "_call_log"):
+-            self._call_log = CallLogStore(self.config.call_log_db_path)
+-        return self._call_log
+-
+-    def _record_call_log(self, ctx: CaptureContext, exception: Optional[BaseException]) -> None:
+-        """One small row per call, success or failure, independent of
+-        capture_success — and, at most once an hour, delete rows older than
+-        the retention window so the table can't grow without bound."""
+-        if not self.config.call_log_enabled:
+-            return
++        with self._aux_lock:
++            if not hasattr(self, "_call_log"):
++                self._call_log = CallLogStore(self.config.call_log_db_path, max_rows=self.config.call_log_max_rows)
++            return self._call_log
++
++    def _record_safe_call(self, event):
++        # No actor, request body, concrete URL, or historical response is
++        # duplicated into this lightweight statistics store.
++        row = dict(kind=event.kind, name=event.name, method=event.method,
++                   path=None, status_code=event.status_code,
++                   ok=event.status == STATUS_OK, duration_ms=event.duration_ms,
++                   actor=None, response_preview=None)
+         try:
+-            status_code = ctx.status_code or (500 if exception is not None else None)
+-            ok = exception is None and not (isinstance(status_code, int) and status_code >= 400)
+-            actor = ctx.actor.label if ctx.actor is not None else None
+-            self.call_log.record(
+-                kind=ctx.kind,
+-                name=ctx.name or ctx.path or "unnamed",
+-                method=ctx.method,
+-                path=ctx.route or ctx.path,
+-                status_code=status_code,
+-                ok=ok,
+-                duration_ms=round(ctx.elapsed_ms, 2),
+-                actor=actor,
+-                response_preview=ctx.response_preview or ctx.result_preview,
+-            )
+-            self._maybe_purge_call_log()
+-        except Exception:  # the call log must never break real request handling
+-            pass
++            if self.config.async_storage:
++                self._call_publisher.submit(row)
++            else:
++                self.call_log.record(**row)
++                self._maybe_purge_call_log()
++        except Exception:
++            self._storage_failures += 1
++
++    @property
++    def _call_publisher(self):
++        with self._aux_lock:
++            if not hasattr(self, "_call_writer"):
++                from .publisher import EventPublisher
++                from .calllog import CallLogSink
++                self._call_writer = EventPublisher(CallLogSink(self.call_log, self.config.call_log_retention_days), self.config.event_queue_size)
++            return self._call_writer
+ 
+     def _maybe_purge_call_log(self) -> None:
+         now = time.monotonic()
+@@ -1097,7 +1134,7 @@
+         scrubbed.claims = self.redactor.scrub(actor.claims)
+         return scrubbed
+ 
+-    def _build_event(self, ctx: CaptureContext, exception: Optional[BaseException]) -> Optional[EventRecord]:
++    def _build_event(self, ctx: CaptureContext, exception: Optional[BaseException], include_success=False) -> Optional[EventRecord]:
+         duration = ctx.elapsed_ms
+         performance = self._performance_signals(ctx, duration)
+ 
+@@ -1114,7 +1151,7 @@
+         elif performance:
+             status = STATUS_SLOW
+ 
+-        if status == STATUS_OK and not self.config.capture_success:
++        if status == STATUS_OK and not self.config.capture_success and not include_success:
+             return None
+         if ctx.suppressed:
+             return None
+@@ -1202,7 +1239,7 @@
+         )
+         return event
+ 
+-    def _store(self, event: EventRecord) -> Optional[EventRecord]:
++    def _store(self, event: EventRecord, record_call=False) -> Optional[EventRecord]:
+         try:
+             event = self._sanitizer.clean(event)
+         except Exception:
+@@ -1222,6 +1259,10 @@
+         try:
+             if self.config.before_store:
+                 event = self._sanitizer.clean(event)
++            if record_call and self.config.call_log_enabled:
++                self._record_safe_call(event)
++            if record_call and event.status == STATUS_OK and not self.config.capture_success:
++                return None
+             if self._publisher:
+                 return event if self._publisher.submit(event) else None
+             self.storage.save(event)
+--- a/jscoup/dashboard/api.py
++++ b/jscoup/dashboard/api.py
+@@ -88,7 +88,10 @@
+         base = {
+             "Content-Type": self.content_type,
+             "Cache-Control": "no-store",
+-            "X-Powered-By": "JSCoup",
++            "X-Content-Type-Options": "nosniff",
++            "X-Frame-Options": "DENY",
++            "Referrer-Policy": "no-referrer",
++            "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'self'",
+         }
+         base.update(self.headers or {})
+         return base
+@@ -111,14 +114,22 @@
+             jscoup.config.gateway_rate_limit, jscoup.config.gateway_rate_window
+         )
+ 
++    def _allow_gateway_rate(self, key):
++        c = self.jscoup.config
++        return self.jscoup.gateway.allow_rate("invoke:" + key, c.gateway_rate_limit, c.gateway_rate_window)
++
+     @property
+     def _sessions(self):
+         """Lazily-built :class:`~jscoup.dashboard.sessions.SessionStore`."""
+-        if not hasattr(self, "_session_store"):
+-            from .sessions import SessionStore
+-
+-            c = self.jscoup.config
+-            realm = json.dumps([c.auth_realm_id or [c.service_name, c.environment], c.dashboard_username, c.credential_epoch, self.jscoup._auth_credential_id])
++        from .sessions import SessionStore
++        import hashlib
++        c = self.jscoup.config
++        credential_id = self.jscoup._auth_credential_id if c.dashboard_password_hash == self.jscoup._initial_password_hash else hashlib.sha256((c.dashboard_password_hash or "").encode()).hexdigest()
++        realm = json.dumps([c.auth_realm_id or [c.service_name, c.environment], c.dashboard_username, c.credential_epoch, credential_id])
++        if not hasattr(self, "_session_store") or self._session_store.realm != realm:
++            if hasattr(self, "_session_store"):
++                self._session_store.revoke_all()
++                self._session_store.close()
+             self._session_store = SessionStore(c.dashboard_session_db_path, realm=realm)
+         return self._session_store
+ 
+@@ -138,6 +149,24 @@
+         query = query or {}
+         headers = headers or {}
+         method = method.upper()
++        if body and len(body) > self.jscoup.config.dashboard_max_body_bytes:
++            return json_response({"error": "Request body too large"}, 413)
++        lowered = {str(k).lower(): str(v) for k, v in headers.items()}
++        if method not in {"GET", "HEAD", "OPTIONS"}:
++            from urllib.parse import urlsplit
++            origin = lowered.get("origin")
++            if lowered.get("sec-fetch-site") == "cross-site":
++                return json_response({"error": "Cross-site request rejected"}, 403)
++            if origin:
++                expected = base_url
++                try:
++                    incoming = urlsplit(origin)
++                    destination = urlsplit(expected or "")
++                    valid_origin = incoming.scheme in ("http", "https") and incoming.netloc and (incoming.scheme, incoming.netloc) == (destination.scheme, destination.netloc)
++                except ValueError:
++                    valid_origin = False
++                if not valid_origin:
++                    return json_response({"error": "Origin rejected"}, 403)
+         path = "/" + (path or "").strip("/")
+         mount = self.jscoup.config.mount_path if mount is None else mount
+ 
+@@ -187,7 +216,7 @@
+             return json_response({"error": "Method not allowed"}, 405)
+ 
+         if path == "/api/login" and method == "POST":
+-            return self._login(body)
++            return self._login(body, client_ip)
+ 
+         auth_error = self._authenticate(path, method, query, headers)
+         if auth_error is not None:
+@@ -426,6 +455,8 @@
+         label = str(payload.get("label") or "").strip()
+         username = str(payload.get("username") or "").strip()
+         password = str(payload.get("password") or "")
++        if len(username) > 256 or len(password) > 1024:
++            return json_response({"error": "Credentials exceed length limit"}, 400)
+         if not label or not username or not password:
+             return json_response({"error": "label, username, and password are required"}, 400)
+         allowed = payload.get("allowed_target_ids")
+@@ -467,6 +498,8 @@
+     def _gateway_reset_password(self, user_id: str, body: Optional[bytes]) -> Response:
+         payload = _json_body(body)
+         password = str(payload.get("password") or "")
++        if len(password) > 1024:
++            return json_response({"error": "Credentials exceed length limit"}, 400)
+         if len(password) < 8:
+             return json_response({"error": "password must be at least 8 characters"}, 400)
+         ok = self.jscoup.gateway.reset_password(user_id, password)
+@@ -491,9 +524,8 @@
+ 
+     def _enrich_targets(self, targets: list) -> list:
+         """Add ``expected_responses`` — an example body for every status the
+-        API can plausibly return: a developer override first, then a real
+-        response the call log has seen for that exact status, then a fixed
+-        default (see :mod:`jscoup.examples`)."""
++        API can plausibly return: an explicitly approved developer example,
++        then a synthetic default. Captured telemetry is never published (see :mod:`jscoup.examples`)."""
+         from ..examples import build_expected_responses, parse_preview
+ 
+         config = self.jscoup.config
+@@ -502,22 +534,6 @@
+         for item in targets:
+             target = self.jscoup.registry.get(item["id"])
+             seen: Dict[int, Any] = {}
+-            if config.call_log_enabled:
+-                # A sub-app mounted under a prefix (e.g. /excel) is logged by
+-                # the route it sees itself, without that prefix — so try the
+-                # full path, then the path with leading segments dropped.
+-                names = [item["name"]]
+-                if item["kind"] == "http":
+-                    segments = [x for x in (item["path"] or "").split("/") if x]
+-                    names = [f"{item['method']} /" + "/".join(segments[i:]) for i in range(len(segments))]
+-                try:
+-                    for log_name in names:
+-                        found = self.jscoup.call_log.seen_statuses(log_name)
+-                        if found:
+-                            seen = {code: parse_preview(body) for code, body in found.items()}
+-                            break
+-                except Exception:
+-                    seen = {}
+             overrides = dict(target.response_examples) if target is not None else {}
+             params = target.params if target is not None else []
+             item["expected_responses"] = build_expected_responses(
+@@ -608,16 +624,15 @@
+         payload = _json_body(body)
+         username = str(payload.get("username") or "").strip()
+         password = str(payload.get("password") or "")
+-        key = username.lower()
++        if len(username) > 256 or len(password) > 1024:
++            return json_response({"error": "Credentials exceed length limit"}, 400)
+         gw = self.jscoup.gateway
+-        with self._gateway_auth_lock:
+-            if gw.is_login_locked(key):
+-                return json_response({"error": "Too many failed attempts. Try again later."}, 429)
+-            session = gw.login(username, password, client_ip=client_ip)
+-            if session is None:
+-                gw.record_login_failure(key, 5, 300.0)
+-                return json_response({"error": "Invalid credentials, or not allowed from this network"}, 401)
+-            gw.clear_login_failures(key)
++        source = client_ip or "unknown"
++        if not gw.allow_rate("login-source:" + source, 30, 60) or not gw.allow_rate("login:" + source + ":" + username.lower(), 5, 300):
++            return json_response({"error": "Too many login attempts. Try again later."}, 429)
++        session = gw.login(username, password, client_ip=client_ip)
++        if session is None:
++            return json_response({"error": "Invalid credentials, or not allowed from this network"}, 401)
+         return json_response({
+             "token": session["token"],
+             "expires_at": session["expires_at"],
+@@ -664,9 +679,9 @@
+             if not user.allows_ip(client_ip):
+                 # Defense in depth beyond the login-time IP check.
+                 return json_response({"error": "Access denied from this network location"}, 403)
+-            if not self._gateway_limiter.allow(user.id):
++            if not self._allow_gateway_rate(user.id):
+                 return json_response({"error": "Rate limit exceeded"}, 429)
+-        elif not self._gateway_limiter.allow(f"public:{target_id}"):
++        elif not self._allow_gateway_rate(f"public:{target_id}"):
+             return json_response({"error": "Rate limit exceeded"}, 429)
+ 
+         params = dict(query)
+@@ -711,7 +726,7 @@
+         if not user.allows_ip(client_ip):
+             # Same per-user network restriction the proxy path already enforces.
+             return json_response({"error": "Access denied from this network location"}, 403)
+-        if not self._gateway_limiter.allow(user.id):
++        if not self._allow_gateway_rate(user.id):
+             return json_response({"error": "Rate limit exceeded"}, 429)
+         return json_response({"calls": self.jscoup.gateway.list_calls(user.id)})
+ 
+@@ -727,7 +742,7 @@
+             return json_response({"error": "Invalid or missing gateway token"}, 401)
+         if not user.allows_ip(client_ip):
+             return json_response({"error": "Access denied from this network location"}, 403)
+-        if not self._gateway_limiter.allow(user.id):
++        if not self._allow_gateway_rate(user.id):
+             return json_response({"error": "Rate limit exceeded"}, 429)
+         allowed = self._enrich_targets([t for t in self.jscoup.registry.to_list() if user.allows(t["id"])])
+         for t in allowed:
+@@ -823,27 +838,24 @@
+             return None
+         return json_response({"error": "Login required", "login_required": True}, 401)
+ 
+-    def _login(self, body: Optional[bytes]) -> Response:
++    def _login(self, body: Optional[bytes], client_ip=None) -> Response:
+         config = self.jscoup.config
+         if not config.dashboard_username:
+             return json_response({"error": "No dashboard login is configured"}, 400)
+         payload = _json_body(body)
+         username = str(payload.get("username") or "")
+         password = str(payload.get("password") or "")
+-        key = username.strip().lower()
+-
+-        with self._login_lock:
+-            if self._sessions.is_login_locked(key):
+-                return json_response({"error": "Too many failed attempts. Try again later."}, 429)
+-            valid = auth.verify_username(username, config.dashboard_username) and auth.verify_password(
+-                password, config.dashboard_password_hash
+-            )
+-            if not valid:
+-                self._sessions.record_login_failure(
+-                    key, config.dashboard_login_max_attempts, config.dashboard_login_lockout_seconds,
+-                )
+-                return json_response({"error": "Invalid username or password"}, 401)
+-            self._sessions.clear_login_failures(key)
++        if len(username) > 256 or len(password) > 1024:
++            return json_response({"error": "Credentials exceed length limit"}, 400)
++        source = client_ip or "unknown"
++        pair = "login:" + source + ":" + username.lower()
++        sessions = self._sessions
++        if not sessions.allow_rate("source:" + source, 30, 60) or not sessions.allow_rate(pair, config.dashboard_login_max_attempts, config.dashboard_login_lockout_seconds):
++            return json_response({"error": "Too many login attempts. Try again later."}, 429)
++        # Always perform the password verification, even for an unknown name.
++        valid_password = auth.verify_password(password, config.dashboard_password_hash)
++        if not (auth.verify_username(username, config.dashboard_username) and valid_password):
++            return json_response({"error": "Invalid username or password"}, 401)
+ 
+         token = self._sessions.create(username, config.dashboard_session_hours * 3600)
+         cookie = auth.build_set_cookie_header(
+@@ -866,8 +878,9 @@
+         if not expected:
+             return None
+         lowered = {str(k).lower(): v for k, v in headers.items()}
+-        provided = query.get("token") or lowered.get("x-jscoup-token") or ""
+-        if provided != expected:
++        provided = lowered.get("x-jscoup-token") or ""
++        import hmac
++        if not hmac.compare_digest(str(provided).encode(), str(expected).encode()):
+             return json_response({"error": "Dashboard token required"}, 401)
+         return None
+ 
+--- a/jscoup/dashboard/auth.py
++++ b/jscoup/dashboard/auth.py
+@@ -18,7 +18,7 @@
+ 
+ SESSION_COOKIE_NAME = "jscoup_session"
+ 
+-_PBKDF2_ITERATIONS = 260_000
++_PBKDF2_ITERATIONS = 600_000
+ _HASH_ALGO = "sha256"
+ 
+ AttemptStore = Dict[str, Tuple[int, float]]
+@@ -152,3 +152,8 @@
+         except ValueError:
+             continue
+     return False
++
++
++def dummy_password_hash():
++    # Fixed public dummy record. Same cost as a newly created real account.
++    return "pbkdf2_sha256$600000$" + "00" * 16 + "$" + "00" * 32
+--- a/jscoup/dashboard/sessions.py
++++ b/jscoup/dashboard/sessions.py
+@@ -9,6 +9,7 @@
+ from __future__ import annotations
+ 
+ import os
++from ..security import private_file
+ import hashlib
+ import secrets
+ import sqlite3
+@@ -49,7 +50,8 @@
+         self.db_path = os.path.abspath(db_path)
+         directory = os.path.dirname(self.db_path)
+         if directory:
+-            os.makedirs(directory, exist_ok=True)
++            os.makedirs(directory, mode=0o700, exist_ok=True)
++        private_file(self.db_path)
+         self._local = threading.local()
+         self._lock = threading.Lock()
+         with self._lock:
+@@ -63,6 +65,7 @@
+             conn = raw_connect(self.db_path, timeout=10, check_same_thread=False)
+             conn.row_factory = sqlite3.Row
+             conn.execute("PRAGMA journal_mode=WAL")
++            private_file(self.db_path)
+             self._local.conn = conn
+         return conn
+ 
+@@ -160,3 +163,8 @@
+                 "DELETE FROM dashboard_login_attempts WHERE realm = ? AND key = ?", (self.realm, key)
+             )
+             self.conn.commit()
++
++    def allow_rate(self, key, limit, window):
++        from ..security import allow_quota
++        with self._lock:
++            return allow_quota(self.conn, self.realm + ":" + key, limit, window)
+--- a/jscoup/dashboard/static/index.html
++++ b/jscoup/dashboard/static/index.html
+@@ -562,6 +562,7 @@
+ 
+ <script>
+ const MOUNT = "__JSCOUP_MOUNT__";
++try { localStorage.removeItem("jscoup-token"); localStorage.removeItem("jscoup-gw-token"); } catch { /* unavailable storage */ }
+ const api = (p, o) => fetch(MOUNT + "/api" + p, o).then(async r => {
+   const data = await r.json().catch(() => ({}));
+   if (r.status === 401 && data.login_required) { showLogin(); throw new Error("login_required"); }
+@@ -1303,8 +1304,8 @@
+ }
+ function exitGatewayMode() {
+   state.mode = null; state.gwToken = null; targets = [];
+-  try { $("#lab-token").value = localStorage.getItem("jscoup-token") || ""; } catch { /* private mode */ }
+-  try { localStorage.removeItem("jscoup-gw-token"); } catch { /* private mode */ }
++  try { $("#lab-token").value = sessionStorage.getItem("jscoup-token") || ""; } catch { /* private mode */ }
++  try { sessionStorage.removeItem("jscoup-gw-token"); } catch { /* private mode */ }
+   document.querySelectorAll(".nav button[data-view]").forEach(b => { b.hidden = false; });
+   $("#nav-btn-access").hidden = true; // the admin refresh() below re-shows this if gateway_enabled
+   $("#nav-btn-docgroups").hidden = true;
+@@ -1350,7 +1351,7 @@
+       $("#login-error").textContent = "";
+       $("#login-password").value = "";
+       state.gwToken = gwData.token;
+-      try { localStorage.setItem("jscoup-gw-token", gwData.token); } catch { /* private mode */ }
++      try { sessionStorage.setItem("jscoup-gw-token", gwData.token); } catch { /* private mode */ }
+       hideLogin();
+       enterGatewayMode(gwData.user);
+       return;
+@@ -1399,10 +1400,10 @@
+ };
+ 
+ /* ---------- check every API ---------- */
+-$("#checkapis-token").value = localStorage.getItem("jscoup-token") || "";
++$("#checkapis-token").value = sessionStorage.getItem("jscoup-token") || "";
+ $("#checkapis-run").onclick = async () => {
+   const token = $("#checkapis-token").value.trim();
+-  if (token) localStorage.setItem("jscoup-token", token);
++  if (token) sessionStorage.setItem("jscoup-token", token);
+   const btn = $("#checkapis-run"); btn.disabled = true; btn.textContent = "running…";
+   let data;
+   try {
+@@ -2101,7 +2102,7 @@
+ 
+ async function boot() {
+   let gwToken = null;
+-  try { gwToken = localStorage.getItem("jscoup-gw-token"); } catch { /* private mode */ }
++  try { gwToken = sessionStorage.getItem("jscoup-gw-token"); } catch { /* private mode */ }
+   if (gwToken) {
+     try {
+       const r = await fetch(MOUNT + "/gw/my-targets", { headers: { Authorization: "Bearer " + gwToken } });
+@@ -2112,7 +2113,7 @@
+         return;
+       }
+     } catch { /* network error — fall through to the admin login */ }
+-    try { localStorage.removeItem("jscoup-gw-token"); } catch { /* private mode */ }
++    try { sessionStorage.removeItem("jscoup-gw-token"); } catch { /* private mode */ }
+   }
+   state.mode = "admin";
+   refresh(); loadTargets();
+--- a/jscoup/gateway.py
++++ b/jscoup/gateway.py
+@@ -16,6 +16,7 @@
+ 
+ import json
+ import os
++from .security import private_file
+ import re
+ import secrets
+ import hashlib
+@@ -161,12 +162,17 @@
+     multiple worker processes) stay consistent with each other.
+     """
+ 
+-    def __init__(self, db_path: str = ".jscoup/gateway.db", token_ttl_hours: float = DEFAULT_TOKEN_TTL_HOURS):
++    def __init__(self, db_path: str = ".jscoup/gateway.db", token_ttl_hours: float = DEFAULT_TOKEN_TTL_HOURS, realm: str = "", encryption_key=None):
++        from .security import realm_path
++        self.encryption_key = encryption_key
++        if realm:
++            db_path = realm_path(db_path, realm)
+         self.db_path = os.path.abspath(db_path)
+         self.token_ttl_hours = token_ttl_hours
+         directory = os.path.dirname(self.db_path)
+         if directory:
+-            os.makedirs(directory, exist_ok=True)
++            os.makedirs(directory, mode=0o700, exist_ok=True)
++        private_file(self.db_path)
+         self._local = threading.local()
+         self._lock = threading.Lock()
+         with self._lock:
+@@ -176,6 +182,27 @@
+             # without it — CREATE TABLE IF NOT EXISTS above is a no-op there.
+             self._ensure_column("gateway_doc_groups", "categories", "TEXT")
+             self._ensure_column("gateway_users", "categories", "TEXT")
++
++    def _encrypt_credential(self, value):
++        if not value:
++            return None
++        if not self.encryption_key:
++            raise ValueError("Storing downstream credentials requires encryption_key and jscoup[crypto]")
++        from .crypto import encrypt_text
++        return encrypt_text(value, self.encryption_key)
++
++    def _decrypt_credential(self, value):
++        if not value:
++            return None
++        if not self.encryption_key or not value.startswith("enc:"):
++            raise ValueError("Unencrypted legacy downstream credential; recreate the user with encryption enabled")
++        from .crypto import decrypt_text
++        return decrypt_text(value, self.encryption_key)
++
++    def allow_rate(self, key, limit, window):
++        from .security import allow_quota
++        with self._lock:
++            return allow_quota(self.conn, key, limit, window)
+ 
+     def _ensure_column(self, table: str, column: str, column_type: str) -> None:
+         existing = {row["name"] for row in self.conn.execute(f"PRAGMA table_info({table})").fetchall()}
+@@ -190,6 +217,7 @@
+             conn = raw_connect(self.db_path, timeout=10, check_same_thread=False)
+             conn.row_factory = sqlite3.Row
+             conn.execute("PRAGMA journal_mode=WAL")
++            private_file(self.db_path)
+             self._local.conn = conn
+         return conn
+ 
+@@ -199,15 +227,14 @@
+             conn.close()
+             self._local.conn = None
+ 
+-    @staticmethod
+-    def _user_from_row(row: Any) -> GatewayUser:
++    def _user_from_row(self, row: Any) -> GatewayUser:
+         allowed = row["allowed_target_ids"]
+         return GatewayUser(
+             id=row["id"], label=row["label"], username=row["username"],
+             allowed_target_ids=ALL_TARGETS if allowed == ALL_TARGETS else json.loads(allowed),
+             allowed_ips=json.loads(row["allowed_ips"]) if row["allowed_ips"] else None,
+             created_at=row["created_at"], revoked=bool(row["revoked"]),
+-            password_hash=row["password_hash"], downstream_token=row["downstream_token"],
++            password_hash=row["password_hash"], downstream_token=self._decrypt_credential(row["downstream_token"]),
+             categories=json.loads(row["categories"]) if row["categories"] else {},
+         )
+ 
+@@ -242,7 +269,7 @@
+                 "allowed_ips, downstream_token, created_at, revoked, categories) VALUES (?,?,?,?,?,?,?,?,0,?)",
+                 (user.id, user.label, user.username, user.password_hash,
+                  allowed if allowed == ALL_TARGETS else json.dumps(allowed),
+-                 json.dumps(ip_list) if ip_list else None, downstream_token, user.created_at,
++                 json.dumps(ip_list) if ip_list else None, self._encrypt_credential(downstream_token), user.created_at,
+                  json.dumps(user.categories) if user.categories else None),
+             )
+             self.conn.commit()
+@@ -336,9 +363,9 @@
+                 "SELECT * FROM gateway_users WHERE username = ?", (username,)
+             ).fetchone()
+         user = self._user_from_row(row) if row is not None else None
+-        if user is None or user.revoked:
+-            return None
+-        if not verify_password(password, user.password_hash):
++        from .dashboard.auth import dummy_password_hash
++        valid = verify_password(password, user.password_hash if user else dummy_password_hash())
++        if user is None or user.revoked or not valid:
+             return None
+         if not user.allows_ip(client_ip):
+             return None
+--- a/jscoup/integrations/django.py
++++ b/jscoup/integrations/django.py
+@@ -86,7 +86,7 @@
+             query_string=request.META.get("QUERY_STRING", ""),
+             client_ip=request.META.get("REMOTE_ADDR"),
+             actor=jscoup.identity.resolve(token, source, scheme),
+-            simulation_id=headers.get("X-JSCoup-Simulation") or headers.get("X-JSCoup-Simulation"),
++            simulation_id=request.headers.get("X-JSCoup-Simulation"),
+         )
+         if jscoup.config.capture_headers:
+             ctx.headers = jscoup.redactor.scrub_headers(headers)
+@@ -111,6 +111,7 @@
+         match = getattr(request, "resolver_match", None)
+         if match is not None:
+             ctx.route = getattr(match, "route", ctx.route)
++            ctx.name = f"{request.method} /{str(ctx.route).lstrip(chr(47))}"
+         if getattr(request, "_jscoup_done", False):
+             from ..context import pop
+ 
+@@ -127,6 +128,7 @@
+         match = getattr(request, "resolver_match", None)
+         if match is not None:
+             ctx.route = getattr(match, "route", ctx.route)
++            ctx.name = f"{request.method} /{str(ctx.route).lstrip(chr(47))}"
+             ctx.name = f"{request.method} {ctx.route}"
+         ctx.status_code = ctx.status_code or 500
+         jscoup.finish(ctx, exception=exception)
+@@ -142,18 +144,21 @@
+     if jscoup is None:
+         return HttpResponse(b'{"error":"JSCoup is not installed"}', status=500,
+                             content_type="application/json")
++    body = request.read(jscoup.config.dashboard_max_body_bytes + 1)
++    if len(body) > jscoup.config.dashboard_max_body_bytes:
++        return HttpResponse(b'{"error":"Request body too large"}', status=413, content_type="application/json")
+     result = jscoup.dashboard.handle(
+         path="/" + subpath,
+         method=request.method,
+         query=request.GET.dict(),
+-        body=request.body,
++        body=body,
+         headers={k: v for k, v in request.headers.items()},
+         base_url=f"{request.scheme}://{request.get_host()}",
+         client_ip=(request.headers.get("x-forwarded-for") if jscoup.config.trust_proxy_headers else None)
+         or request.META.get("REMOTE_ADDR"),
+     )
+     response = HttpResponse(result.body, status=result.status, content_type=result.content_type)
+-    for key, value in (result.headers or {}).items():
++    for key, value in result.all_headers().items():
+         response[key] = value
+     return response
+ 
+--- a/jscoup/integrations/fastapi.py
++++ b/jscoup/integrations/fastapi.py
+@@ -60,7 +60,7 @@
+             if message.get("type") == "http.request":
+                 chunk = message.get("body", b"")
+                 if chunk and sum(len(c) for c in body_chunks) < config.body_preview_chars * 2:
+-                    body_chunks.append(chunk)
++                    body_chunks.append(chunk[:max(0, config.body_preview_chars * 2 - sum(map(len, body_chunks)))])
+             return message
+ 
+         response_chunks: list = []
+@@ -73,7 +73,7 @@
+                 # show what every call returned (and offer real examples).
+                 chunk = message.get("body", b"")
+                 if response_is_json and chunk and sum(len(c) for c in response_chunks) < config.body_preview_chars * 2:
+-                    response_chunks.append(chunk)
++                    response_chunks.append(chunk[:max(0, config.body_preview_chars * 2 - sum(map(len, response_chunks)))])
+             if message.get("type") == "http.response.start":
+                 response_is_json = any(
+                     k.lower() == b"content-type" and b"json" in v.lower() for k, v in message.get("headers", [])
+@@ -124,7 +124,13 @@
+         async def _dashboard(request, subpath=""):
+             from starlette.concurrency import run_in_threadpool
+ 
+-            body = await request.body()
++            limit = jscoup.config.dashboard_max_body_bytes
++            chunks = bytearray()
++            async for chunk in request.stream():
++                if len(chunks) + len(chunk) > limit:
++                    return FastAPIResponse(content=b'{"error":"Request body too large"}', status_code=413, media_type="application/json")
++                chunks.extend(chunk)
++            body = bytes(chunks)
+             # Off the event loop: dashboard.handle() is a plain sync call,
+             # and when the gateway is enabled it can make its own blocking
+             # HTTP loopback call back into this same app, which would
+--- a/jscoup/integrations/flask.py
++++ b/jscoup/integrations/flask.py
+@@ -94,11 +94,17 @@
+         @blueprint.route("/", defaults={"subpath": ""}, methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+         @blueprint.route("/<path:subpath>", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+         def _dashboard(subpath: str):
++            limit = config.dashboard_max_body_bytes
++            if request.content_length is not None and request.content_length > limit:
++                return FlaskResponse('{"error":"Request body too large"}', status=413, content_type="application/json")
++            body = request.stream.read(limit + 1)
++            if len(body) > limit:
++                return FlaskResponse('{"error":"Request body too large"}', status=413, content_type="application/json")
+             result = jscoup.dashboard.handle(
+                 path="/" + subpath,
+                 method=request.method,
+                 query=request.args.to_dict(),
+-                body=request.get_data(),
++                body=body,
+                 headers=dict(request.headers),
+                 base_url=request.host_url.rstrip("/"),
+                 client_ip=(request.headers.get("X-Forwarded-For") if config.trust_proxy_headers else None)
+--- a/jscoup/integrations/standalone.py
++++ b/jscoup/integrations/standalone.py
+@@ -32,7 +32,17 @@
+         jscoup = self.server.jscoup  # type: ignore[attr-defined]
+         parts = urlsplit(self.path)
+         query = dict(parse_qsl(parts.query))
+-        length = int(self.headers.get("Content-Length") or 0)
++        self.connection.settimeout(10)
++        try:
++            length = int(self.headers.get("Content-Length") or 0)
++        except ValueError:
++            self.send_error(400, "Invalid Content-Length")
++            self.close_connection = True
++            return
++        if self.headers.get("Transfer-Encoding") or length < 0 or length > jscoup.config.dashboard_max_body_bytes:
++            self.send_error(413, "Unsupported transfer encoding or body too large")
++            self.close_connection = True
++            return
+         body = self.rfile.read(length) if length else b""
+         headers = {key: value for key, value in self.headers.items()}
+         try:
+@@ -42,7 +52,7 @@
+                 query=query,
+                 body=body,
+                 headers=headers,
+-                base_url=None,
++                base_url="http://" + self.headers.get("Host", ""),
+                 mount="",
+                 client_ip=self.client_address[0] if self.client_address else None,
+             )
+--- a/jscoup/publisher.py
++++ b/jscoup/publisher.py
+@@ -1,63 +1,131 @@
+-"""Bounded, best-effort background delivery. Never blocks producers on storage."""
+-import copy,os,queue,threading,time
++"""Bounded, best-effort background delivery with observable backpressure."""
++import copy
++import os
++import queue
++import sys
++import threading
++import time
++from dataclasses import fields, is_dataclass
++
++
++def _resident_size(value, seen=None):
++    """Python-object accounting; not a process RSS guarantee."""
++    seen = set() if seen is None else seen
++    if id(value) in seen:
++        return 0
++    seen.add(id(value))
++    size = sys.getsizeof(value)
++    if is_dataclass(value):
++        return size + sum(_resident_size(getattr(value, f.name), seen) for f in fields(value))
++    if isinstance(value, dict):
++        return size + sum(_resident_size(k, seen) + _resident_size(v, seen) for k, v in value.items())
++    if isinstance(value, (list, tuple, set)):
++        return size + sum(_resident_size(v, seen) for v in value)
++    return size
++
++
+ class EventPublisher:
+-    def __init__(self,storage,capacity=4096,on_event=None):
+-        self.storage=storage;self.capacity=capacity;self.on_event=on_event
+-        self._pid=os.getpid();self._queue=queue.Queue(capacity);self._condition=threading.Condition()
+-        self._thread=None;self._closing=False;self._pending=0
+-        self._metrics=dict(accepted=0,saved=0,dropped=0,failed=0,callback_failed=0)
+-    def submit(self,event):
+-        if os.getpid()!=self._pid:
++    def __init__(self, storage, capacity=4096, on_event=None, max_bytes=16 * 1024 * 1024):
++        self.storage = storage
++        self.capacity = capacity
++        self.on_event = on_event
++        self.max_bytes = max_bytes
++        self._pid = os.getpid()
++        self._queue = queue.Queue(capacity)
++        self._condition = threading.Condition()
++        self._thread = None
++        self._closing = False
++        self._pending = 0
++        self._pending_bytes = 0
++        self._metrics = dict(accepted=0, saved=0, dropped=0, failed=0, callback_failed=0)
++
++    def submit(self, event):
++        if os.getpid() != self._pid:
+             raise RuntimeError('Create JSCoup in each worker after fork')
+-        snapshot=copy.deepcopy(event)
++        size = _resident_size(event)
+         with self._condition:
+-            if self._closing:
+-                self._metrics['dropped']+=1;return False
++            if self._closing or self._pending_bytes + size > self.max_bytes or self._queue.full():
++                self._metrics['dropped'] += 1
++                return False
++            snapshot = copy.deepcopy(event)
+             if self._thread is None:
+-                self._thread=threading.Thread(target=self._run,daemon=True,name='jscoup-publisher');self._thread.start()
+-            try:self._queue.put_nowait(snapshot)
+-            except queue.Full:self._metrics['dropped']+=1;return False
+-            self._pending+=1;self._metrics['accepted']+=1
++                self._thread = threading.Thread(target=self._run, daemon=True, name='jscoup-publisher')
++                self._thread.start()
++            self._queue.put_nowait((snapshot, size))
++            self._pending += 1
++            self._pending_bytes += size
++            self._metrics['accepted'] += 1
+             return True
++
+     def _run(self):
+         try:
+             while True:
+-                try:event=self._queue.get(timeout=.05)
++                try:
++                    event, size = self._queue.get(timeout=.05)
+                 except queue.Empty:
+                     with self._condition:
+-                        if self._closing:return
++                        if self._closing:
++                            return
+                     continue
++                batch = [(event, size)]
++                if hasattr(self.storage, 'save_batch'):
++                    while len(batch) < 100:
++                        try:
++                            batch.append(self._queue.get_nowait())
++                        except queue.Empty:
++                            break
+                 try:
+-                    self.storage.save(event)
+-                    with self._condition:self._metrics['saved']+=1
++                    if len(batch) > 1:
++                        self.storage.save_batch([item for item, _ in batch])
++                    else:
++                        self.storage.save(event)
++                    with self._condition:
++                        self._metrics['saved'] += len(batch)
+                     if self.on_event:
+-                        try:self.on_event(event)
+-                        except Exception:
+-                            with self._condition:self._metrics['callback_failed']+=1
++                        for item, _ in batch:
++                            try:
++                                self.on_event(item)
++                            except Exception:
++                                with self._condition:
++                                    self._metrics['callback_failed'] += 1
+                 except Exception:
+-                    with self._condition:self._metrics['failed']+=1
++                    with self._condition:
++                        self._metrics['failed'] += len(batch)
+                 finally:
+                     with self._condition:
+-                        self._pending-=1;self._condition.notify_all()
+-                    self._queue.task_done()
++                        self._pending -= len(batch)
++                        self._pending_bytes -= sum(item_size for _, item_size in batch)
++                        self._condition.notify_all()
++                    for _ in batch:
++                        self._queue.task_done()
+         finally:
+             self.storage.close()
+-    def flush(self,timeout=5):
+-        deadline=time.monotonic()+max(0,timeout)
++
++    def flush(self, timeout=5):
++        deadline = time.monotonic() + max(0, timeout)
+         with self._condition:
+             while self._pending:
+-                remaining=deadline-time.monotonic()
+-                if remaining<=0:return False
++                remaining = deadline - time.monotonic()
++                if remaining <= 0:
++                    return False
+                 self._condition.wait(remaining)
+             return True
+-    def close(self,timeout=5):
+-        with self._condition:self._closing=True
++
++    def close(self, timeout=5):
++        with self._condition:
++            self._closing = True
+         if threading.current_thread() is self._thread:
+             return False
+-        deadline=time.monotonic()+max(0,timeout)
+-        complete=self.flush(timeout)
+-        if self._thread:self._thread.join(max(0,deadline-time.monotonic()))
+-        else:self.storage.close()
++        deadline = time.monotonic() + max(0, timeout)
++        complete = self.flush(timeout)
++        if self._thread:
++            self._thread.join(max(0, deadline - time.monotonic()))
++        else:
++            self.storage.close()
+         return complete and (self._thread is None or not self._thread.is_alive())
++
+     def metrics(self):
+-        with self._condition:return {**self._metrics,'pending':self._pending,'capacity':self.capacity,'closed':self._closing}
++        with self._condition:
++            return {**self._metrics, 'pending': self._pending, 'capacity': self.capacity,
++                    'pending_bytes': self._pending_bytes, 'max_bytes': self.max_bytes,
++                    'closed': self._closing}
+--- a/jscoup/sanitizer.py
++++ b/jscoup/sanitizer.py
+@@ -4,10 +4,11 @@
+ from itertools import islice
+ from urllib.parse import urlsplit,urlunsplit,parse_qsl,urlencode
+ 
+-_SQL_LITERAL = re.compile(r"'(?:''|[^'])*'|\$\$[\s\S]*?\$\$|\$([A-Za-z_][A-Za-z_0-9]*)\$[\s\S]*?\$\1\$|\b\d+(?:\.\d+)?\b")
++_SQL_LITERAL = re.compile(r"'(?:''|\\.|[^'\\])*'|\$\$[\s\S]*?\$\$|\$([A-Za-z_][A-Za-z_0-9]*)\$[\s\S]*?\$\1\$|\b\d+(?:\.\d+)?\b")
+ _SQL_COMMENT = re.compile(r'/\*[\s\S]*?\*/|--[^\n]*')
+ def sql_shape(sql):
+-    return _SQL_LITERAL.sub('?', _SQL_COMMENT.sub(' ', str(sql)))[:4000]
++    sql = re.sub(r'"(?:""|[^"\\]|\\.)*"', '?', str(sql))
++    return _SQL_LITERAL.sub('?', _SQL_COMMENT.sub(' ', sql))[:4000]
+ 
+ class EventSanitizer:
+     def __init__(self,redactor):self.redactor=redactor
+--- a/jscoup/security.py
++++ b/jscoup/security.py
+@@ -0,0 +1,71 @@
++"""Shared boundaries for local state and cross-worker quotas.
++
++SQLite coordination is for workers on one host, not a distributed cluster.
++"""
++import hashlib
++import os
++import stat
++import time
++
++
++def private_file(path):
++    """Create state without a world-readable creation window; reject symlinks."""
++    directory = os.path.dirname(os.path.abspath(path))
++    os.makedirs(directory, mode=0o700, exist_ok=True)
++    flags = os.O_CREAT | os.O_RDWR | getattr(os, 'O_NOFOLLOW', 0)
++    fd = os.open(path, flags, 0o600)
++    try:
++        if not stat.S_ISREG(os.fstat(fd).st_mode):
++            raise ValueError('State path must be a regular file')
++        if os.name == 'posix':
++            os.fchmod(fd, 0o600)
++    finally:
++        os.close(fd)
++    for suffix in ('-wal', '-shm'):
++        companion = path + suffix
++        if os.path.exists(companion) and os.name == 'posix':
++            fd = os.open(companion, os.O_RDWR | getattr(os, 'O_NOFOLLOW', 0))
++            try:
++                os.fchmod(fd, 0o600)
++            finally:
++                os.close(fd)
++
++
++def realm_path(path, realm):
++    """All tables in a gateway database belong to exactly one realm."""
++    stem, extension = os.path.splitext(path)
++    digest = hashlib.sha256(realm.encode()).hexdigest()[:32]
++    return stem + '.' + digest + (extension or '.db')
++
++
++def allow_quota(conn, key, limit, window, capacity=10000):
++    """Atomic fixed-window quota, bounded state, fail closed at capacity.
++
++    Caller must hold its connection's thread lock. BEGIN IMMEDIATE also
++    serializes competing processes. Keys are hashed, never stored verbatim.
++    """
++    now = time.time()
++    key = hashlib.sha256(key.encode()).hexdigest()
++    conn.execute('CREATE TABLE IF NOT EXISTS security_quotas '
++                 '(key TEXT PRIMARY KEY, hits INTEGER NOT NULL, expires REAL NOT NULL)')
++    conn.execute("CREATE INDEX IF NOT EXISTS idx_security_quotas_expiry ON security_quotas(expires)")
++    conn.commit()
++    conn.execute('BEGIN IMMEDIATE')
++    try:
++        conn.execute('DELETE FROM security_quotas WHERE expires <= ?', (now,))
++        row = conn.execute('SELECT hits FROM security_quotas WHERE key = ?', (key,)).fetchone()
++        if row is None:
++            if conn.execute('SELECT COUNT(*) FROM security_quotas').fetchone()[0] >= capacity:
++                conn.commit()
++                return False
++            conn.execute('INSERT INTO security_quotas VALUES (?,?,?)', (key, 1, now + window))
++            permitted = True
++        else:
++            permitted = row[0] < limit
++            if permitted:
++                conn.execute('UPDATE security_quotas SET hits = hits + 1 WHERE key = ?', (key,))
++        conn.commit()
++        return permitted
++    except BaseException:
++        conn.rollback()
++        raise
+--- a/jscoup/simulator.py
++++ b/jscoup/simulator.py
+@@ -55,6 +55,8 @@
+ class Simulator:
+     def __init__(self, jscoup: Any):
+         self.jscoup = jscoup
++        import threading
++        self._slots = threading.BoundedSemaphore(jscoup.config.invoke_max_concurrency)
+ 
+     # -- entry point -------------------------------------------------------- #
+ 
+@@ -117,9 +119,17 @@
+         started = time.perf_counter()
+ 
+         loop = asyncio.get_running_loop()
+-        result = await loop.run_in_executor(
+-            None, self._invoke_http, target, params, token, base_url, method, headers, simulation_id
+-        )
++        if not self._slots.acquire(blocking=False):
++            return SimulationResult(ok=False, error="Invocation concurrency limit reached")
++        try:
++            future = loop.run_in_executor(
++                None, self._invoke_admitted, target, params, token, base_url, method, headers, simulation_id
++            )
++        except BaseException:
++            self._slots.release()
++            raise
++        # Cancellation must not free a slot while the network thread still runs.
++        result = await asyncio.shield(future)
+ 
+         result["simulation_id"] = simulation_id
+         result["duration_ms"] = round((time.perf_counter() - started) * 1000, 2)
+@@ -130,7 +140,18 @@
+ 
+     # -- http --------------------------------------------------------------- #
+ 
+-    def _invoke_http(
++    def _invoke_http(self, *args):
++        if not self._slots.acquire(blocking=False):
++            return SimulationResult(ok=False, error="Invocation concurrency limit reached")
++        return self._invoke_admitted(*args)
++
++    def _invoke_admitted(self, *args):
++        try:
++            return self._invoke_http_inner(*args)
++        finally:
++            self._slots.release()
++
++    def _invoke_http_inner(
+         self,
+         target: Any,
+         params: Dict[str, Any],
+@@ -245,14 +266,20 @@
+                 {k: _flat(v) for k, v in query.items()}
+             )
+ 
++        if body and len(body) > self.jscoup.config.dashboard_max_body_bytes:
++            return SimulationResult(ok=False, error="Outbound request body too large")
+         request = urllib.request.Request(url, data=body, method=http_method, headers=request_headers)
++        deadline = time.monotonic() + self.jscoup.config.invoke_timeout
+         try:
+             with _opener.open(request, timeout=self.jscoup.config.invoke_timeout) as resp:
+-                raw = resp.read().decode("utf-8", "replace")
++                raw = _read_response(resp, self.jscoup.config.invoke_max_response_bytes, deadline).decode("utf-8", "replace")
+                 status = resp.status
+                 response_type = resp.headers.get("Content-Type", "")
+         except urllib.error.HTTPError as exc:
+-            raw = exc.read().decode("utf-8", "replace")
++            try:
++                raw = _read_response(exc, self.jscoup.config.invoke_max_response_bytes, deadline).decode("utf-8", "replace")
++            except ValueError as limit_error:
++                return SimulationResult(ok=False, error=str(limit_error), url=url)
+             status = exc.code
+             response_type = exc.headers.get("Content-Type", "") if exc.headers else ""
+         except Exception as exc:  # connection refused, timeout, ...
+@@ -327,8 +354,13 @@
+     for name, value in fields.items():
+         out += f'--{boundary}\r\nContent-Disposition: form-data; name="{_q(name)}"\r\n\r\n'.encode()
+         out += str(value).encode("utf-8") + crlf
++    if len(out) > MAX_UPLOAD_BYTES:
++        raise ValueError("Aggregate upload exceeds limit")
+     for name, f in files.items():
+-        raw = base64.b64decode(f.get("data") or "", validate=False)
++        encoded = f.get("data") or ""
++        if len(encoded) > ((MAX_UPLOAD_BYTES + 2) // 3) * 4:
++            raise ValueError("Encoded file exceeds upload limit")
++        raw = base64.b64decode(encoded, validate=True)
+         if len(raw) > MAX_UPLOAD_BYTES:
+             raise ValueError(f"File '{f.get('filename')}' is larger than {MAX_UPLOAD_BYTES // (1024 * 1024)} MB")
+         ctype = _q(f.get("content_type") or "application/octet-stream")
+@@ -336,6 +368,8 @@
+             f'--{boundary}\r\nContent-Disposition: form-data; name="{_q(name)}"; '
+             f'filename="{_q(f.get("filename") or "upload")}"\r\nContent-Type: {ctype}\r\n\r\n'
+         ).encode()
++        if len(out) + len(raw) + len(crlf) > MAX_UPLOAD_BYTES:
++            raise ValueError("Aggregate upload exceeds limit")
+         out += raw + crlf
+     out += f"--{boundary}--\r\n".encode()
+     return bytes(out), f"multipart/form-data; boundary={boundary}"
+@@ -354,3 +388,16 @@
+         return json.loads(body)
+     except ValueError:
+         return None
++
++
++def _read_response(response, limit, deadline=None):
++    out = bytearray()
++    reader = getattr(response, "read1", response.read)
++    while len(out) <= limit:
++        if deadline is not None and time.monotonic() >= deadline:
++            raise ValueError("Outbound response deadline exceeded")
++        chunk = reader(min(65536, limit + 1 - len(out)))
++        if not chunk:
++            return bytes(out)
++        out.extend(chunk)
++    raise ValueError("Outbound response exceeds configured byte limit")
+--- a/jscoup/storage/sqlite.py
++++ b/jscoup/storage/sqlite.py
+@@ -15,6 +15,7 @@
+ from typing import Any, Dict, List, Optional
+ 
+ from ..dbwatch import raw_connect
++from ..security import private_file
+ from ..models import EventRecord
+ from .base import BaseStorage
+ 
+@@ -84,7 +85,8 @@
+         self._write_lock = threading.Lock()
+         directory = os.path.dirname(self.db_path)
+         if directory:
+-            os.makedirs(directory, exist_ok=True)
++            os.makedirs(directory, mode=0o700, exist_ok=True)
++        private_file(self.db_path)
+         self._init_schema()
+         self._writes_since_trim = 0
+ 
+@@ -99,6 +101,7 @@
+             conn.execute("PRAGMA journal_mode=WAL")
+             conn.execute("PRAGMA synchronous=NORMAL")
+             conn.execute("PRAGMA busy_timeout=5000")
++            private_file(self.db_path)
+             self._local.conn = conn
+         return conn
+ 

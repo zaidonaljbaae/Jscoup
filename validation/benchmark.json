@@ -1,0 +1,72 @@
+{
+  "python": "3.12.14",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "results": [
+    {
+      "mode": "bare",
+      "calls": 10000,
+      "calls_per_second": 28248268,
+      "elapsed_with_flush": 0.0004,
+      "drained": true,
+      "metrics": {
+        "before_store_failures": 0,
+        "storage_failures": 0,
+        "publisher": null
+      }
+    },
+    {
+      "mode": "synchronous",
+      "calls": 10000,
+      "calls_per_second": 14347,
+      "elapsed_with_flush": 0.697,
+      "drained": true,
+      "metrics": {
+        "before_store_failures": 0,
+        "storage_failures": 0,
+        "publisher": null
+      }
+    },
+    {
+      "mode": "background",
+      "calls": 10000,
+      "calls_per_second": 8770,
+      "elapsed_with_flush": 1.1412,
+      "drained": true,
+      "metrics": {
+        "before_store_failures": 0,
+        "storage_failures": 0,
+        "publisher": {
+          "accepted": 6580,
+          "saved": 6580,
+          "dropped": 3420,
+          "failed": 0,
+          "callback_failed": 0,
+          "pending": 0,
+          "capacity": 1024,
+          "closed": false
+        }
+      }
+    },
+    {
+      "mode": "sample_1_percent",
+      "calls": 10000,
+      "calls_per_second": 689294,
+      "elapsed_with_flush": 0.0148,
+      "drained": true,
+      "metrics": {
+        "before_store_failures": 0,
+        "storage_failures": 0,
+        "publisher": {
+          "accepted": 99,
+          "saved": 99,
+          "dropped": 0,
+          "failed": 0,
+          "callback_failed": 0,
+          "pending": 0,
+          "capacity": 4096,
+          "closed": false
+        }
+      }
+    }
+  ]
+}
