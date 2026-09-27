@@ -64,6 +64,7 @@ jobs:
     # (e.g. `gunicorn -w 2` without --preload). See storage/sql.py's
     # create_all try/except for the fix.
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:16-alpine
