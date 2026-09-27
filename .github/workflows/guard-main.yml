@@ -1,0 +1,39 @@
+name: Guard main (no tests)
+
+# main holds only the library and its documentation. The test suite, the
+# validation material and CI live on the dev branch.
+# This check fails a pull request into main that adds any of those files, for
+# example a dev -> main pull request, which would bring the tests back.
+#
+# To make it a rule GitHub enforces:
+#   Settings -> Branches -> Add rule for "main" -> Require status checks to pass
+#   -> select "no-tests-on-main".
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  no-tests-on-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fail if the pull request brings in test or validation files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          forbidden='^(tests/|validation/|TEST_RESULTS\.md$|VALIDATION(_231)?\.md$|requirements-dev\.txt$|\.github/workflows/ci\.yml$)'
+          changed=$(git diff --name-only --diff-filter=AM "$BASE_SHA"..."$HEAD_SHA")
+          bad=$(printf '%s\n' "$changed" | grep -E "$forbidden" || true)
+          if [ -n "$bad" ]; then
+            echo "This pull request adds files that must stay out of main (they belong on the dev branch):"
+            printf '%s\n' "$bad" | head -50
+            exit 1
+          fi
+          echo "OK: no test or validation files in this pull request."
