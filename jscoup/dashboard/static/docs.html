@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API docs — __JSCOUP_SERVICE__</title>
+<style>
+:root{
+  --ink:#1A1B1E; --panel:#232428; --panel-2:#2B2C31; --line:#37383E; --line-soft:#2E2F34;
+  --fg:#ECEDEF; --muted:#ABADB8; --dim:#868893;
+  --brand:#7DA2FF; --err:#F0696C; --warn:#F0B429; --ok:#3FCB86; --info:#7DA2FF;
+  --json-key:#8FB3FF; --json-str:#8FE0B4; --json-num:#F0B429; --json-bool:#D9A9FF;
+  --action-bg:#ECEDEF; --action-fg:#15161A;
+  --console-bg:#18191C; --console-fg:#E4E4E7;
+  --mono: Consolas, "Courier New", monospace;
+  --sans: Arial, Helvetica, sans-serif;
+  --r:10px; --r-sm:7px;
+  --shadow: 0 1px 2px rgba(0,0,0,.24), 0 10px 28px -8px rgba(0,0,0,.45);
+  --get:#3FCB86; --post:#7DA2FF; --put:#38BDF8; --patch:#A594F9; --delete:#F0696C;
+  --onbrand:#0B1220;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --ink:#EBF0FA; --panel:#FFFFFF; --panel-2:#E4EAF8; --line:#CBD6ED; --line-soft:#DCE4F5;
+    --fg:#10131C; --muted:#333A54; --dim:#4F567A;
+    --brand:#2952D6; --err:#DC2626; --warn:#C2670A; --ok:#0E9A5B; --info:#2952D6;
+    --json-key:#2952D6; --json-str:#0E7A45; --json-num:#B45309; --json-bool:#6A45D6;
+    --action-bg:#1A1B1E; --action-fg:#FFFFFF;
+    --console-bg:#E9EEFA; --console-fg:#161A24;
+    --get:#0E9A5B; --post:#2952D6; --put:#0E7FB0; --patch:#6A45D6; --delete:#DC2626;
+    --onbrand:#FFFFFF;
+    --shadow: 0 1px 2px rgba(20,30,60,.06), 0 10px 28px -10px rgba(20,30,60,.16);
+  }
+}
+:root[data-theme="light"]{
+  --ink:#EBF0FA; --panel:#FFFFFF; --panel-2:#E4EAF8; --line:#CBD6ED; --line-soft:#DCE4F5;
+  --fg:#10131C; --muted:#333A54; --dim:#4F567A;
+  --brand:#2952D6; --err:#DC2626; --warn:#C2670A; --ok:#0E9A5B; --info:#2952D6;
+  --json-key:#2952D6; --json-str:#0E7A45; --json-num:#B45309; --json-bool:#6A45D6;
+  --action-bg:#1A1B1E; --action-fg:#FFFFFF;
+  --console-bg:#E9EEFA; --console-fg:#161A24;
+  --get:#0E9A5B; --post:#2952D6; --put:#0E7FB0; --patch:#6A45D6; --delete:#DC2626;
+  --onbrand:#FFFFFF;
+  --shadow: 0 1px 2px rgba(20,30,60,.06), 0 10px 28px -10px rgba(20,30,60,.16);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--ink);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:60px}
+a{color:inherit}
+button,input,textarea{font:inherit;color:inherit}
+.wrap{max-width:920px;margin:0 auto;padding:28px 20px}
+
+header.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+header.top .eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
+header.top h1{margin:4px 0 0;font-size:26px;letter-spacing:-.015em;font-weight:700}
+header.top .sub{color:var(--dim);font-size:12.5px;margin-top:8px;font-family:var(--mono);font-weight:600}
+#theme-btn{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);color:var(--muted);cursor:pointer;font-size:12px;font-weight:700;padding:8px 14px;box-shadow:var(--shadow)}
+#theme-btn:hover{color:var(--fg)}
+
+details.auth-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;box-shadow:var(--shadow)}
+details.auth-card summary{list-style:none;cursor:pointer;padding:14px 18px;display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:700}
+details.auth-card summary::-webkit-details-marker{display:none}
+details.auth-card summary .icon{width:18px;height:18px;flex-shrink:0}
+details.auth-card summary .arrow{margin-left:auto;transition:transform .15s ease;color:var(--dim)}
+details.auth-card[open] summary .arrow{transform:rotate(180deg)}
+details.auth-card summary .state{font-weight:400;color:var(--dim);font-size:12px}
+.auth-body{padding:0 18px 18px}
+.auth-body p{margin:0 0 14px;color:var(--dim);font-size:12.5px;font-weight:500}
+.auth-row{display:flex;gap:10px;flex-wrap:wrap}
+.auth-row .field{flex:1;min-width:220px}
+.auth-row label{display:block;font-size:11px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.auth-row input{width:100%;background:var(--console-bg);color:var(--console-fg);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;font-family:var(--mono);font-size:12.5px;outline:none}
+.auth-row input:focus{border-color:var(--info)}
+.auth-actions{display:flex;align-items:flex-end;gap:8px}
+.btn{background:var(--action-bg);color:var(--action-fg);border:0;border-radius:var(--r-sm);font-size:12.5px;font-weight:700;padding:8px 16px;cursor:pointer;white-space:nowrap}
+.btn.ghost{background:none;color:var(--muted);border:1px solid var(--line);font-weight:700}
+#auth-status{margin-top:10px;font-size:12px;font-weight:700;min-height:14px}
+#auth-status.ok{color:var(--ok)} #auth-status.err{color:var(--err)}
+
+.ref-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;box-shadow:var(--shadow)}
+.ref-card summary{list-style:none;cursor:pointer;padding:12px 18px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700}
+.ref-card summary::-webkit-details-marker{display:none}
+.ref-card summary .arrow{margin-left:auto;transition:transform .15s ease;color:var(--dim)}
+.ref-card[open] summary .arrow{transform:rotate(180deg)}
+.ref-table{width:100%;border-collapse:collapse;margin:0 18px 18px;width:calc(100% - 36px)}
+.ref-table td{padding:10px 10px;font-size:14.5px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.ref-table td:first-child{font-family:var(--mono);font-weight:800;font-size:16px;white-space:nowrap;width:1%}
+.ref-table td:first-child.c2{color:var(--ok)} .ref-table td:first-child.c4{color:var(--warn)} .ref-table td:first-child.c5{color:var(--err)}
+.ref-table td:last-child{color:var(--muted);font-weight:600}
+
+/* ---- the catalogue itself: a single column of tag sections, each a  ---- */
+/* ---- distinct accent color, each operation expanding in place where ---- */
+/* ---- it sits — plus a slim dot-rail on the edge for jumping around  ---- */
+.filter-wrap{position:sticky;top:12px;z-index:3;margin-bottom:18px}
+.filter-wrap input{width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px 11px 38px;font-size:13.5px;outline:none;box-shadow:var(--shadow);background-repeat:no-repeat;background-position:14px center;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%239B9CA6' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E")}
+.filter-wrap input:focus{border-color:var(--brand)}
+
+.tag-section{border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;overflow:hidden;box-shadow:var(--shadow)}
+.tag-head{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--panel);border:0;border-left:4px solid var(--tag-color);padding:13px 16px;cursor:pointer}
+.tag-head .tag-name{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.tag-head .n{background:var(--panel-2);color:var(--muted);border-radius:99px;padding:1px 9px;font-size:11px;font-weight:600}
+.tag-head .arrow{margin-left:auto;transition:transform .15s ease;color:var(--dim)}
+.tag-section.collapsed .tag-head .arrow{transform:rotate(-90deg)}
+.tag-section.collapsed .op-list{display:none}
+.op-list{background:var(--panel)}
+
+.op{border-top:1px solid var(--line-soft);scroll-margin-top:70px}
+.op:first-child{border-top:0}
+.op > summary{list-style:none;display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer}
+.op > summary::-webkit-details-marker{display:none}
+.op > summary:hover{background:var(--panel-2)}
+.op[open] > summary{background:var(--panel-2);border-bottom:1px solid var(--line-soft)}
+.op-path{font-family:var(--mono);font-size:12.5px;flex-shrink:0;max-width:56%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.op-path .base{color:var(--muted);font-weight:400}
+.baseurl{display:inline-flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;font-weight:700}
+.baseurl code{font-family:var(--mono);font-weight:600;padding:3px 8px;border-radius:6px;background:var(--panel-2,rgba(127,127,127,.12))}
+.op-summary-desc{color:var(--dim);font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.op .lock{color:var(--warn);flex-shrink:0}
+.op .chev{color:var(--dim);flex-shrink:0;transition:transform .15s ease}
+.op[open] .chev{transform:rotate(90deg)}
+.mbadge{display:inline-block;flex-shrink:0;width:52px;text-align:center;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:4px 0;border-radius:4px;color:var(--onbrand)}
+.mbadge.get{background:var(--get)} .mbadge.post{background:var(--post)}
+.mbadge.put{background:var(--put)} .mbadge.patch{background:var(--patch)}
+.mbadge.delete{background:var(--delete)} .mbadge.call{background:var(--muted)}
+
+.op-body{padding:6px 16px 20px 16px}
+.full-desc{color:var(--muted);font-size:13.5px;font-weight:500;margin:10px 0 20px;white-space:pre-wrap}
+.section-h{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.section-h .n{background:var(--panel-2);color:var(--muted);border-radius:99px;padding:1px 8px;font-size:10.5px}
+
+/* the live Response heading stays hidden until a call has been made (a display rule would otherwise override [hidden]) */
+.response-h[hidden]{display:none}
+/* one parameter per line: name | in | type | description | example value */
+.param-head,.param-card{display:grid;grid-template-columns:minmax(120px,1.1fr) 64px 56px minmax(110px,1.2fr) minmax(290px,2.6fr);gap:10px;align-items:center}
+.param-head{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);padding:0 14px 6px}
+.param-card{border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 14px;margin-bottom:6px;background:var(--panel-2)}
+.param-card .pname{font-family:var(--mono);font-size:13px;font-weight:700;overflow-wrap:anywhere}
+.param-card .pname .req{color:var(--err);margin-left:2px}
+.param-card .ploc{justify-self:start;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:2px 8px}
+.param-card .ptype{font-family:var(--mono);font-size:11px;color:var(--info)}
+.param-card .pdesc{color:var(--dim);font-size:12px;font-weight:600;margin:0}
+.param-card input{width:100%;min-width:0;background:var(--console-bg);color:var(--console-fg);border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 10px;font-family:var(--mono);font-size:12.5px;outline:none}
+.param-card input:focus{border-color:var(--info)}
+.opt-toggle{display:block;width:100%;text-align:left;background:none;border:1px dashed var(--line);border-radius:var(--r-sm);color:var(--dim);font-size:12px;font-weight:600;padding:7px 14px;margin:2px 0 6px;cursor:pointer}
+.opt-toggle:hover{color:var(--fg);border-color:var(--info)}
+.opt-box[hidden]{display:none}
+@media(max-width:820px){
+  .param-head{display:none}
+  .param-card{grid-template-columns:1fr auto auto}
+  .param-card .pdesc,.param-card input{grid-column:1/-1}
+}
+.no-params{color:var(--dim);font-size:12.5px;font-weight:500;margin:0 0 20px;font-style:italic}
+
+.op-actions{display:flex;align-items:center;gap:10px}
+.try-btn{background:var(--brand);color:#fff;border:0;border-radius:var(--r-sm);font-size:13.5px;font-weight:700;padding:11px 24px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.try-btn:hover{filter:brightness(1.08)}
+.try-btn:disabled{opacity:.6;cursor:default}
+.copy-btn{background:none;border:1px solid var(--line);border-radius:var(--r-sm);color:var(--dim);cursor:pointer;padding:9px 14px;font-size:12px;font-weight:700}
+.copy-btn:hover{color:var(--fg);border-color:var(--brand)}
+.result{margin-top:16px;background:var(--console-bg);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.result .status{padding:9px 14px;font-size:12.5px;font-weight:700;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.result .status.ok{color:var(--ok)} .result .status.bad{color:var(--err)}
+.result .status .auto-tag{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--dim)}
+.result-tabs{display:flex;gap:2px;padding:8px 10px 0;border-bottom:1px solid var(--line)}
+.result-tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);cursor:pointer;font-size:11.5px;font-weight:700;padding:6px 10px;text-transform:uppercase;letter-spacing:.03em}
+.result-tabs button.active{color:var(--fg);border-bottom-color:var(--brand)}
+.result pre{margin:0;padding:14px;overflow-x:auto;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--console-fg);max-height:420px}
+.jk{color:var(--json-key)} .js{color:var(--json-str)} .jn{color:var(--json-num)} .jb{color:var(--json-bool)}
+
+.status-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.status-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:14px;font-weight:800;border-radius:99px;padding:6px 14px;border:1.5px solid var(--line);cursor:help}
+.status-chip{background:none;cursor:pointer}
+.status-chip.selected{background:var(--panel-2)}
+.example-block{margin:0 0 18px;background:var(--console-bg);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--console-fg);max-height:280px}
+.example-meaning{color:var(--muted);font-size:13px;font-weight:600;margin-bottom:8px}
+.status-chip.c2{color:var(--ok);border-color:var(--ok)}
+.status-chip.c4{color:var(--warn);border-color:var(--warn)}
+.status-chip.c5{color:var(--err);border-color:var(--err)}
+
+/* a slim rail of dots along the edge of the page — not a real navigation */
+/* menu like Swagger has none of, just a quick way to see how many */
+/* operations there are and jump around without scrolling blindly */
+#toc-rail{position:fixed;right:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:4;max-height:70vh;overflow-y:auto;padding:4px}
+@media (max-width:1180px){#toc-rail{display:none}}
+.toc-dot{width:8px;height:8px;border-radius:50%;border:0;padding:0;cursor:pointer;background:var(--line);flex-shrink:0;transition:transform .15s ease}
+.toc-dot.active{transform:scale(1.6);background:var(--dot-color)}
+.toc-dot:hover{transform:scale(1.3)}
+
+.empty{padding:60px 20px;text-align:center;color:var(--dim)}
+.foot{text-align:center;color:var(--dim);font-size:11.5px;margin-top:30px}
+</style>
+</head>
+<body>
+<div id="toc-rail"></div>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">__JSCOUP_SERVICE__</div>
+      <h1 id="page-title">API reference</h1>
+      <div class="sub" id="whoami">loading…</div>
+      <div class="baseurl">Base URL <code id="base-url"></code></div>
+    </div>
+    <div style="display:flex;gap:8px"><button id="postman-btn" type="button" class="btn ghost" hidden>Export Postman</button><button id="theme-btn" type="button">Dark mode</button></div>
+  </header>
+
+  <details class="auth-card">
+    <summary>
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Authorize
+      <span class="state" id="auth-summary">no token applied</span>
+      <span class="arrow">&#9660;</span>
+    </summary>
+    <div class="auth-body">
+      <p>Paste a gateway token to unlock the APIs assigned to it. Some APIs also need an API key of their own — set it below and it's sent as <code>X-Downstream-Token</code>.</p>
+      <div class="auth-row">
+        <div class="field">
+          <label for="auth-token">Bearer token</label>
+          <input id="auth-token" type="password" placeholder="gateway token (POST /gw/login) — or, for a public API marked with a lock, that API's own token" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="auth-xkey">X-Api-Key (optional)</label>
+          <input id="auth-xkey" type="password" placeholder="only if this API needs one" autocomplete="off">
+        </div>
+        <div class="auth-actions">
+          <button class="btn" id="auth-apply" type="button">Apply</button>
+          <button class="btn ghost" id="auth-clear" type="button">Clear</button>
+        </div>
+      </div>
+      <div id="auth-status"></div>
+    </div>
+  </details>
+
+  <details class="ref-card">
+    <summary>
+      <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg>
+      Status codes — what they generally mean
+      <span class="arrow">&#9660;</span>
+    </summary>
+    <table class="ref-table" id="status-ref-table"></table>
+  </details>
+
+  <div class="filter-wrap">
+    <input id="op-filter" placeholder="Filter APIs by path, name, or description…" autocomplete="off">
+  </div>
+
+  <div id="groups"></div>
+  <div id="empty-state"></div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const $ = sel => document.querySelector(sel);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
+// Injected by the server at render time — always correct regardless of the
+// mount path or which page variant this is (the global docs page, or one
+// admin-curated public group).
+const DATA_URL = "__JSCOUP_DATA_URL__";
+const GW_BASE = "__JSCOUP_GW_BASE__";
+
+let savedTheme = null;
+try { savedTheme = localStorage.getItem("jscoup-docs-theme"); } catch { /* private mode */ }
+if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+$("#theme-btn").textContent = (savedTheme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "light" ? "Dark mode" : "Light mode";
+$("#theme-btn").onclick = () => {
+  const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem("jscoup-docs-theme", next); } catch { /* private mode */ }
+  $("#theme-btn").textContent = next === "light" ? "Dark mode" : "Light mode";
+};
+
+let state = { token: "", xkey: "", targets: [], filter: "" };
+
+const BASE_URL = location.origin;
+function displayPath(t) {
+  return (t.path || t.name || "").replace(/<(?:[^<>:]+:)?([^<>]+)>/g, "{$1}");
+}
+function fullUrl(t) { return t.kind === "service" ? (t.path || t.name) : BASE_URL + displayPath(t); }
+function methodOf(t) { return t.kind === "service" ? "call" : (t.method || "GET").toLowerCase(); }
+
+// APIs are listed POST, GET, PUT, PATCH, DELETE (anything else last), then by path.
+const METHOD_RANK = { post: 0, get: 1, put: 2, patch: 3, delete: 4 };
+function byMethod(a, b) {
+  const rank = t => METHOD_RANK[methodOf(t)] ?? 9;
+  return rank(a) - rank(b) || String(a.path || a.name).localeCompare(String(b.path || b.name));
+}
+
+// An explicit tag from the source code wins; otherwise fall back to the
+// first meaningful path segment (skipping a bare "api" prefix), so routes
+// with no declared tags still land in a sensible category instead of one
+// giant "fastapi"/"flask" bucket.
+function defaultCategory(t) {
+  if (t.tags && t.tags[0]) return t.tags[0];
+  const segments = (t.path || "").split("/").filter(Boolean).filter(s => !/^[{<]/.test(s));
+  const first = segments[0] === "api" ? segments[1] : segments[0];
+  return first || t.framework || "general";
+}
+
+// A tiny, dependency-free JSON highlighter — good enough for a response
+// preview without pulling in a syntax-highlighting library for one panel.
+function highlightJson(text) {
+  return esc(text).replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+    match => {
+      if (/^"/.test(match)) return `<span class="${/:$/.test(match) ? "jk" : "js"}">${match}</span>`;
+      if (/true|false/.test(match)) return `<span class="jb">${match}</span>`;
+      if (/null/.test(match)) return `<span class="jb">${match}</span>`;
+      return `<span class="jn">${match}</span>`;
+    }
+  );
+}
+
+// General HTTP status code meanings — shown as a standing reference on the
+// page, and used to label the per-operation "expected responses" chips below.
+const STATUS_MEANINGS = {
+  200: "OK — the request succeeded.",
+  201: "Created — a new resource was created.",
+  204: "No Content — succeeded, with no response body.",
+  400: "Bad Request — the request is malformed or its input is invalid.",
+  401: "Unauthorized — missing or invalid credentials.",
+  403: "Forbidden — authenticated, but not allowed to do this.",
+  404: "Not Found — the resource or endpoint doesn't exist.",
+  405: "Method Not Allowed — the wrong HTTP verb was used for this endpoint.",
+  409: "Conflict — the request conflicts with the resource's current state.",
+  422: "Unprocessable Entity — well-formed, but semantically invalid input.",
+  429: "Too Many Requests — the rate limit was exceeded.",
+  500: "Internal Server Error — something broke on the server.",
+  502: "Bad Gateway — the server, acting as a gateway, got an invalid response.",
+  503: "Service Unavailable — the server is temporarily overloaded or down.",
+};
+function statusClass(code) { return code < 300 ? "c2" : code < 500 ? "c4" : "c5"; }
+function renderStatusReference() {
+  const table = $("#status-ref-table");
+  table.innerHTML = Object.entries(STATUS_MEANINGS).map(([code, meaning]) => {
+    const [title, ...rest] = meaning.split(" — ");
+    return `<tr><td class="${statusClass(+code)}">${code}</td><td><b>${esc(title)}</b> — ${esc(rest.join(" — "))}</td></tr>`;
+  }).join("");
+}
+renderStatusReference();
+
+// A best-effort guess at which statuses an operation can plausibly return,
+// from what's already known about it (method, whether it takes path/other
+// parameters, whether it needs a token) — not a guarantee of its exact
+// server-declared responses, just a helpful, honest expectation to set.
+function expectedStatusCodes(t) {
+  const method = (t.method || "GET").toUpperCase();
+  const params = t.params || [];
+  const codes = new Set([method === "DELETE" ? 204 : 200]);
+  if (params.length) codes.add(400);
+  if (params.some(p => p.location === "path")) codes.add(404);
+  if (t.requires_auth) { codes.add(401); codes.add(403); }
+  codes.add(500);
+  return [...codes].sort((a, b) => a - b);
+}
+
+// A tiny, dependency-free "what shape is this" inference — turns a real
+// response into a compact type sketch (TypeScript-like), so an operation
+// has a documented response format without needing a hand-written schema.
+// Runs entirely client-side against whatever "Run" actually returned.
+function inferShape(value, indent = "") {
+  if (value === null || value === undefined) return "null";
+  if (Array.isArray(value)) {
+    if (!value.length) return "[]";
+    return `[\n${indent}  ${inferShape(value[0], indent + "  ")}\n${indent}]  // × ${value.length}`;
+  }
+  if (typeof value === "object") {
+    const keys = Object.keys(value);
+    if (!keys.length) return "{}";
+    const lines = keys.map(k => `${indent}  ${k}: ${inferShape(value[k], indent + "  ")}`);
+    return `{\n${lines.join(",\n")}\n${indent}}`;
+  }
+  return typeof value;
+}
+
+function matchesFilter(t) {
+  if (!state.filter) return true;
+  const haystack = `${t.method || ""} ${t.path || ""} ${t.name || ""} ${t.description || ""}`.toLowerCase();
+  return haystack.includes(state.filter);
+}
+
+// A plausible example value for a parameter that has no server-declared
+// default — guessed from its name and type, so the placeholder is something
+// a caller could plausibly send instead of a generic "value…".
+function sampleValueFor(p) {
+  if (p.default !== null && p.default !== undefined) return String(p.default);
+  const name = (p.name || "").toLowerCase();
+  const type = (p.type || "").toLowerCase();
+  if (name.includes("email")) return "user@example.com";
+  if (name === "id" || name.endsWith("_id") || name.endsWith("id")) return "1";
+  if (name.includes("name")) return "Example " + p.name;
+  if (name.includes("date") || name.includes("time")) return "2026-01-15";
+  if (name.includes("url") || name.includes("link")) return "https://example.com";
+  if (name.includes("phone")) return "+1-555-0100";
+  if (type.includes("int") || type.includes("float") || type.includes("number")) return "1";
+  if (type.includes("bool")) return "true";
+  if (type.includes("list") || type.includes("array")) return "a,b,c";
+  return `example-${p.name || "value"}`;
+}
+
+function paramCard(p) {
+  const card = el("div", "param-card");
+  card.innerHTML = `
+    <span class="pname">${esc(p.name)}${p.required ? '<span class="req">*</span>' : ""}</span>
+    <span class="ploc">${esc(p.location)}</span>
+    <span class="ptype">${esc(p.type || "")}</span>
+    <span class="pdesc">${esc(p.description || "—")}</span>
+    <input data-pname="${esc(p.name)}" ${p.type === "file" ? 'type="file" data-file="1" accept="image/*,application/pdf,text/*,.csv,.xlsx,.xls,.json,.zip"' : ""} placeholder="${esc(p.example !== undefined && p.example !== null ? (typeof p.example === "object" ? JSON.stringify(p.example) : p.example) : sampleValueFor(p))}">`;
+  return card;
+}
+
+function buildOpBody(t) {
+  const body = el("div", "op-body");
+  const params = t.params || [];
+  body.innerHTML = `
+    <p class="full-desc">${esc(t.full_description || t.description || "No description yet.")}</p>
+    <div class="section-h">Parameters ${params.length ? `<span class="n">${params.length}</span>` : ""}</div>
+    <div class="param-list"></div>
+    ${params.length ? "" : `<p class="no-params">This API takes no parameters.</p>`}
+    ${t.request_example ? `<div class="section-h">Request body example</div><pre class="example-block">${highlightJson(JSON.stringify(t.request_example, null, 2))}</pre>` : ""}
+    <div class="op-actions">
+      <button class="try-btn" type="button">Run</button>
+      <button class="copy-btn" type="button">Copy path</button>
+    </div>
+    <div class="section-h response-h" style="margin-top:20px" hidden>Response</div>
+    <div class="result-slot"></div>
+    <div class="section-h" style="margin-top:20px">Expected responses</div>
+    <div class="status-chips"></div>
+    <div class="status-example"></div>`;
+  const chips = body.querySelector(".status-chips");
+  const exampleBox = body.querySelector(".status-example");
+  // The server sends an example body for every plausible status (a real
+  // response it has seen, or a fixed default) — fall back to the local
+  // heuristic only if talking to an older server that doesn't.
+  const expected = t.expected_responses || Object.fromEntries(expectedStatusCodes(t).map(c => [c, { description: "", example: null }]));
+  const showStatus = (code, chip) => {
+    chips.querySelectorAll(".status-chip").forEach(c => c.classList.toggle("selected", c === chip));
+    const info = expected[code] || {};
+    const meaning = STATUS_MEANINGS[code] || info.description || "";
+    const example = info.example === null || info.example === undefined ? "(no body)" : JSON.stringify(info.example, null, 2);
+    exampleBox.innerHTML = `<div class="example-meaning">${esc(meaning)}</div><pre class="example-block">${info.example === null || info.example === undefined ? esc(example) : highlightJson(example)}</pre>`;
+  };
+  Object.keys(expected).map(Number).sort((a, b) => a - b).forEach((code, i) => {
+    const chip = el("button", `status-chip ${statusClass(code)}`, code);
+    chip.type = "button";
+    chip.title = STATUS_MEANINGS[code] || "";
+    chip.onclick = () => showStatus(code, chip);
+    chips.append(chip);
+    if (i === 0) showStatus(code, chip);
+  });
+  const list = body.querySelector(".param-list");
+  if (params.length) {
+    list.append(el("div", "param-head", "<span>Name</span><span>In</span><span>Type</span><span>Description</span><span>Value</span>"));
+  }
+  // Required inputs first; optional ones sit behind a toggle so a form like
+  // OAuth2's (username + password, plus four rarely-used fields) stays readable.
+  const requiredParams = params.filter(p => p.required);
+  const optionalParams = params.filter(p => !p.required);
+  const shown = requiredParams.length ? requiredParams : optionalParams;
+  shown.forEach(p => list.append(paramCard(p)));
+  if (requiredParams.length && optionalParams.length) {
+    const toggle = el("button", "opt-toggle", `&#9656; ${optionalParams.length} optional parameter${optionalParams.length === 1 ? "" : "s"} — not needed, leave empty`);
+    toggle.type = "button";
+    const optBox = el("div", "opt-box"); optBox.hidden = true;
+    optionalParams.forEach(p => optBox.append(paramCard(p)));
+    toggle.onclick = () => {
+      optBox.hidden = !optBox.hidden;
+      toggle.innerHTML = (optBox.hidden ? "&#9656; " : "&#9662; ") + `${optionalParams.length} optional parameter${optionalParams.length === 1 ? "" : "s"} — not needed, leave empty`;
+    };
+    list.append(toggle, optBox);
+  }
+  body.querySelector(".copy-btn").onclick = () => {
+    navigator.clipboard?.writeText(fullUrl(t)).catch(() => {});
+    const btn = body.querySelector(".copy-btn");
+    const original = btn.textContent; btn.textContent = "Copied";
+    setTimeout(() => { btn.textContent = original; }, 1200);
+  };
+  body.querySelectorAll("input[data-file]").forEach(inp => {
+    inp.onchange = async () => {
+      inp._file = null;
+      const f = inp.files && inp.files[0];
+      if (!f) return;
+      if (f.size > 8 * 1024 * 1024) { alert("File is larger than 8 MB"); inp.value = ""; return; }
+      const data = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result).split(",")[1] || "");
+        r.onerror = reject;
+        r.readAsDataURL(f);
+      });
+      inp._file = { filename: f.name, content_type: f.type || "application/octet-stream", data };
+    };
+  });
+  body.querySelector(".try-btn").onclick = () => {
+    const values = {};
+    body.querySelectorAll("[data-pname]").forEach(inp => {
+      if (inp.dataset.file) { if (inp._file) values[inp.dataset.pname] = inp._file; return; }
+      if (inp.value !== "") values[inp.dataset.pname] = inp.value;
+    });
+    runOp(t, body, values, { auto: false });
+  };
+  return body;
+}
+
+// Shared by the manual "Run" button and the automatic example fetch
+// below — a real, live call through the gateway, rendered the same way
+// either way (just labeled differently so an auto example never reads as
+// something the visitor asked for).
+async function runOp(t, body, values, { auto }) {
+  const btn = body.querySelector(".try-btn");
+  const originalLabel = btn.textContent;
+  // An API whose source marks it as needing a token isn't callable from
+  // here without one — refuse up front instead of firing a request that
+  // is certain to be turned away.
+  if (t.requires_auth && (t.public !== false || t.accepts_own_token) && !state.token && !state.xkey) {
+    const slot = body.querySelector(".result-slot");
+    body.querySelector(".response-h").hidden = false;
+    slot.innerHTML = `<div class="result"><div class="status bad"><span>&#9679;</span>Token required</div>
+      <pre>This API needs a token. Get one from the login API (for example POST /auth/login), open "Authorize" at the top of the page, paste it as the Bearer token, then try again.</pre></div>`;
+    return;
+  }
+  // Reached through the gateway: unless an admin marked this API public, the
+  // gateway itself wants a gateway token -- even when the API has no auth of
+  // its own. Say so, instead of letting a bare 401 read as "the API failed".
+  if (t.public === false && !t.accepts_own_token && !state.token) {
+    const slot = body.querySelector(".result-slot");
+    body.querySelector(".response-h").hidden = false;
+    slot.innerHTML = `<div class="result"><div class="status bad"><span>&#9679;</span>Gateway token required</div>
+      <pre>This API is not public, so it is reached through the gateway with a gateway token: open "Authorize" at the top of the page and paste one (from POST /gw/login), or ask an admin to mark this API public.</pre></div>`;
+    return;
+  }
+  if (!auto) { btn.disabled = true; btn.textContent = "Running…"; }
+  const headers = {};
+  if (state.token) headers["Authorization"] = "Bearer " + state.token;
+  if (state.xkey) headers["X-Downstream-Token"] = state.xkey;
+  let res, ok = true, statusLine = "";
+  try {
+    const url = GW_BASE + encodeURIComponent(t.id) + (Object.keys(values).length && (t.method || "GET").toUpperCase() === "GET"
+      ? "?" + new URLSearchParams(values).toString() : "");
+    const opts = { method: t.kind === "service" ? "POST" : (t.method || "GET"), headers: { ...headers } };
+    if (opts.method !== "GET" && opts.method !== "HEAD") {
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(values);
+    }
+    const r = await fetch(url, opts);
+    statusLine = `HTTP ${r.status}`;
+    ok = r.ok;
+    const text = await r.text();
+    try { res = JSON.parse(text); } catch { res = text; }
+  } catch (e) {
+    ok = false; statusLine = "Network error"; res = String(e);
+  }
+  if (!auto) { btn.disabled = false; btn.textContent = originalLabel; }
+  body.querySelector(".response-h").hidden = false;
+  // The gateway proxy wraps every call in {ok, status_code, response} —
+  // show the caller's own response body directly (what integrating code
+  // actually consumes, errors included), not JSCoup's envelope around it.
+  let displayRes = res;
+  if (res && typeof res === "object" && !Array.isArray(res) && "response" in res && "status_code" in res) {
+    displayRes = res.response;
+  }
+  const responseBody = typeof displayRes === "string" ? displayRes : JSON.stringify(displayRes, null, 2);
+  // "Format" is inferred live from this actual response — a real,
+  // always-current shape instead of a hand-written schema that can drift.
+  const shape = typeof displayRes === "string" ? "string" : inferShape(displayRes);
+  const slot = body.querySelector(".result-slot");
+  slot.innerHTML = `<div class="result">
+    <div class="status ${ok ? "ok" : "bad"}"><span>&#9679;</span>${esc(statusLine)}${auto ? '<span class="auto-tag">auto-generated example</span>' : ""}</div>
+    <div class="result-tabs">
+      <button type="button" class="tab active" data-tab="example">Example</button>
+      <button type="button" class="tab" data-tab="format">Format</button>
+    </div>
+    <pre data-panel="example">${typeof displayRes === "string" ? esc(responseBody) : highlightJson(responseBody)}</pre>
+    <pre data-panel="format" hidden>${esc(shape)}</pre>
+  </div>`;
+  slot.querySelectorAll(".tab").forEach(tab => {
+    tab.onclick = () => {
+      slot.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x === tab));
+      slot.querySelectorAll("[data-panel]").forEach(p => { p.hidden = p.dataset.panel !== tab.dataset.tab; });
+    };
+  });
+}
+
+// Only a parameterless GET is safe to call on the visitor's behalf without
+// them asking — anything that needs input, or isn't a GET, keeps "Run"
+// as a manual action instead.
+function isAutoSafe(t) {
+  return t.kind === "http" && (t.method || "GET").toUpperCase() === "GET" && !(t.params || []).length;
+}
+
+// A rotating, hand-picked palette (not a raw hue cycle) so each tag section
+// reads as deliberately colored rather than randomly assigned.
+const TAG_PALETTE = ["#6C5CE7", "#00B8A9", "#E84393", "#F0932B", "#0984E3", "#8E44AD", "#16A085", "#D63447"];
+
+let scrollSpy = null;
+function setupScrollSpy() {
+  if (scrollSpy) scrollSpy.disconnect();
+  scrollSpy = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      document.querySelectorAll(".toc-dot.active").forEach(d => d.classList.remove("active"));
+      entry.target._tocDot?.classList.add("active");
+    });
+  }, { rootMargin: "-35% 0px -55% 0px", threshold: 0 });
+  document.querySelectorAll(".op").forEach(op => scrollSpy.observe(op));
+}
+
+function renderGroups() {
+  const container = $("#groups");
+  const rail = $("#toc-rail");
+  container.innerHTML = "";
+  rail.innerHTML = "";
+  const visible = state.targets.filter(matchesFilter);
+  $("#empty-state").innerHTML = state.targets.length && !visible.length
+    ? `<div class="empty">No APIs match that filter.</div>` : "";
+  if (!visible.length) return;
+
+  const byTag = new Map();
+  visible.forEach(t => {
+    // A group can override the category a target is filed under (see the
+    // admin's "Publish a group" screen); fall back to the default rule.
+    const tag = t.category || defaultCategory(t);
+    if (!byTag.has(tag)) byTag.set(tag, []);
+    byTag.get(tag).push(t);
+  });
+  [...byTag.keys()].sort().forEach((tag, tagIndex) => {
+    const items = byTag.get(tag).slice().sort(byMethod);
+    const color = TAG_PALETTE[tagIndex % TAG_PALETTE.length];
+    const section = el("section", "tag-section");
+    section.style.setProperty("--tag-color", color);
+    const head = el("button", "tag-head");
+    head.type = "button";
+    head.innerHTML = `<span class="tag-name">${esc(tag)}</span><span class="n">${items.length}</span><span class="arrow">&#9660;</span>`;
+    head.onclick = () => section.classList.toggle("collapsed");
+    const list = el("div", "op-list");
+    items.forEach(t => {
+      const m = methodOf(t);
+      const details = el("details", "op");
+      const summary = el("summary", "op-summary");
+      summary.innerHTML = `<span class="mbadge ${esc(m)}">${esc(t.kind === "service" ? "call" : t.method)}</span>
+        <span class="op-path" title="${esc(fullUrl(t))}">${t.kind === "service" ? "" : `<span class="base">${esc(BASE_URL)}</span>`}${esc(displayPath(t))}</span>
+        ${t.requires_auth ? '<span class="lock" title="Requires a token">&#128274;</span>' : (t.auth_optional ? '<span class="lock" title="Token optional — works without one, but a token unlocks more">&#128275;</span>' : "")}
+        ${t.public === true ? '<span class="lock" title="Public: no gateway token needed">&#127760;</span>' : ""}
+        <span class="op-summary-desc">${esc(t.description || "")}</span>
+        <span class="chev">&#9656;</span>`;
+      const opBody = buildOpBody(t);
+      details.append(summary, opBody);
+      list.append(details);
+      if (isAutoSafe(t)) {
+        details.addEventListener("toggle", () => {
+          if (details.open && !details._autoTried) {
+            details._autoTried = true;
+            runOp(t, opBody, {}, { auto: true });
+          }
+        });
+      }
+
+      const dot = el("button", "toc-dot");
+      dot.type = "button";
+      dot.title = `${t.kind === "service" ? "CALL" : t.method} ${t.path || t.name}`;
+      dot.style.setProperty("--dot-color", color);
+      dot.onclick = () => { details.open = true; details.scrollIntoView({ behavior: "smooth", block: "center" }); };
+      rail.append(dot);
+      details._tocDot = dot;
+    });
+    section.append(head, list);
+    container.append(section);
+  });
+  setupScrollSpy();
+}
+
+$("#op-filter").oninput = e => { state.filter = e.target.value.trim().toLowerCase(); renderGroups(); };
+
+async function load() {
+  const headers = {};
+  if (state.token) headers["Authorization"] = "Bearer " + state.token;
+  let data;
+  try {
+    const r = await fetch(DATA_URL, { headers });
+    data = await r.json();
+    if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+  } catch (e) {
+    $("#whoami").textContent = "Failed to load: " + e.message;
+    return;
+  }
+  state.targets = data.targets || [];
+  $("#base-url").textContent = BASE_URL;
+  if (data.title) { $("#page-title").textContent = data.title; document.title = data.title + " — API docs"; }
+  $("#whoami").textContent = data.authenticated_as
+    ? `Signed in as ${data.authenticated_as} — ${state.targets.length} API${state.targets.length === 1 ? "" : "s"} visible`
+    : `Public view — ${state.targets.length} API${state.targets.length === 1 ? "" : "s"} visible`;
+  if (!state.targets.length) {
+    $("#empty-state").innerHTML = `<div class="empty"><b>No APIs published yet.</b><br>An admin needs to add APIs to this page, or you need to authorize with a token above.</div>`;
+  }
+  $("#postman-btn").hidden = !state.targets.length;
+  renderGroups();
+}
+
+$("#auth-apply").onclick = () => {
+  state.token = $("#auth-token").value.trim();
+  state.xkey = $("#auth-xkey").value.trim();
+  const status = $("#auth-status");
+  status.className = ""; status.textContent = "";
+  load().then(() => {
+    $("#auth-summary").textContent = state.token ? "token applied" : "no token applied";
+    if (state.token) { status.className = "ok"; status.textContent = "Token applied."; }
+  });
+};
+$("#auth-clear").onclick = () => {
+  $("#auth-token").value = ""; $("#auth-xkey").value = "";
+  state.token = ""; state.xkey = "";
+  $("#auth-summary").textContent = "no token applied";
+  $("#auth-status").className = ""; $("#auth-status").textContent = "";
+  load();
+};
+
+// Builds a Postman Collection v2.1 straight from what this page already
+// loaded — no extra endpoint, so it works on a public group page too, and
+// contains exactly (and only) the APIs the visitor is allowed to see.
+function buildPostman() {
+  const folders = new Map();
+  state.targets.filter(t => t.kind === "http").forEach(t => {
+    let method = (t.method || "GET").toUpperCase(); if (method === "ANY") method = "GET";
+    const params = t.params || [];
+    const headers = [{ key: "Accept", value: "application/json" }];
+    if (t.requires_auth) headers.push({ key: "Authorization", value: "Bearer {{token}}" });
+    const request = {
+      method, header: headers, description: t.full_description || t.description || "",
+      url: {
+        raw: "{{baseUrl}}" + (t.path || ""), host: ["{{baseUrl}}"],
+        path: (t.path || "").replace(/<(?:[^<>:]+:)?([^<>]+)>|\{([^{}:]+)(?::[^{}]+)?\}/g, (m, a, b) => ":" + (a || b)).split("/").filter(Boolean),
+        query: params.filter(p => p.location === "query").map(p => ({ key: p.name, value: String(p.example ?? ""), disabled: !p.required })),
+        variable: params.filter(p => p.location === "path").map(p => ({ key: p.name, value: String(p.example ?? "") })),
+      },
+    };
+    if (t.request_example && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+      headers.push({ key: "Content-Type", value: "application/json" });
+      request.body = { mode: "raw", raw: JSON.stringify(t.request_example, null, 2), options: { raw: { language: "json" } } };
+    }
+    const item = { name: `${method} ${t.path}`, request };
+    if (t.expected_responses) {
+      item.response = Object.entries(t.expected_responses).map(([code, info]) => ({
+        name: `${code} ${info.description || ""}`.trim(), originalRequest: request, status: info.description || "",
+        code: Number(code), header: [{ key: "Content-Type", value: "application/json" }],
+        body: info.example == null ? "" : JSON.stringify(info.example, null, 2),
+      }));
+    }
+    const folder = t.category || defaultCategory(t);
+    if (!folders.has(folder)) folders.set(folder, []);
+    folders.get(folder).push(item);
+  });
+  return {
+    info: { name: $("#page-title").textContent, schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+    item: [...folders.entries()].sort().map(([name, item]) => ({ name, item })),
+    variable: [{ key: "baseUrl", value: location.origin }, { key: "token", value: "" }],
+  };
+}
+$("#postman-btn").onclick = () => {
+  const blob = new Blob([JSON.stringify(buildPostman(), null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = ($("#page-title").textContent || "api").replace(/\W+/g, "-") + ".postman_collection.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+load();
+</script>
+</body>
+</html>

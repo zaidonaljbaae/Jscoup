@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jscoup"
+version = "1.0.0"
+description = "Capture, analyse and replay API failures — with database-aware diagnosis, a standalone admin dashboard and a built-in live tester."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Zaidon Aljbaae" }]
+maintainers = [{ name = "Zaidon Aljbaae" }]
+keywords = ["debugging", "apm", "errors", "flask", "fastapi", "django", "sqlite", "observability", "api-gateway", "error-tracking"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Framework :: Flask",
+  "Framework :: FastAPI",
+  "Framework :: Django",
+  "Topic :: Software Development :: Debuggers",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: System :: Monitoring",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/zaidonaljbaae/JSCOUP"
+Repository = "https://github.com/zaidonaljbaae/JSCOUP"
+Documentation = "https://github.com/zaidonaljbaae/JSCOUP#readme"
+"Integration Guide" = "https://github.com/zaidonaljbaae/JSCOUP/blob/main/docs/INTEGRATION_GUIDE.md"
+"API Reference" = "https://github.com/zaidonaljbaae/JSCOUP/blob/main/docs/API_REFERENCE.md"
+Changelog = "https://github.com/zaidonaljbaae/JSCOUP/blob/main/CHANGELOG.md"
+Issues = "https://github.com/zaidonaljbaae/JSCOUP/issues"
+
+[project.optional-dependencies]
+flask = ["Flask>=2.2", "blinker>=1.6"]  # install_flask connects to Flask signals, which need blinker on Flask 2.2
+fastapi = ["fastapi>=0.100"]
+django = ["Django>=4.0"]
+sqlalchemy = ["SQLAlchemy>=1.4"]
+# Real SQL storage backend (jscoup.storage.sql.SqlStorage) for Postgres/
+# MySQL/Oracle/etc — separate from the `sqlalchemy` extra above, which is
+# only for instrument_sqlalchemy() tracing the *target app's* own engine.
+sql = ["SQLAlchemy>=2.0"]
+# Field-level encryption at rest (jscoup.crypto) — optional, see that module.
+crypto = ["cryptography>=41"]
+# MongoDB storage backend (jscoup.storage.mongo.MongoStorage) — the
+# document-database counterpart to the `sql` extra above.
+mongo = ["pymongo>=4.0"]
+# Connecting to a database reachable only through an SSH bastion/jump host
+# (jscoup.storage.connections.SSHTunnel) — used by both `sql` and `mongo`.
+ssh = ["paramiko>=3.2"]
+# Loading a database connection profile from a .yaml/.yml file (.json/.ini
+# need no extra dependency) — see jscoup.storage.connections.load_connection_file.
+yaml = ["PyYAML>=6.0"]
+# Real, deployed Azure Functions / OCI Functions handler support
+# (jscoup.core.JSCoup.watch_azure_function / watch_oci_function) — the
+# wrappers themselves are duck-typed and need neither package to run; these
+# are only for local type-checking/development against the real SDKs.
+azure = ["azure-functions>=1.18"]
+oci = ["fdk>=0.1.59"]
+dev = [
+  "pytest>=7.4", "httpx>=0.24", "Flask>=2.2", "fastapi>=0.100", "Django>=4.0",
+  "uvicorn>=0.23", "SQLAlchemy>=2.0", "cryptography>=41", "pymongo>=4.0",
+  "mongomock>=4.1", "paramiko>=3.2", "PyYAML>=6.0", "python-multipart>=0.0.9",
+]
+
+[tool.setuptools]
+packages = [
+  "jscoup",
+  "jscoup.analyzers",
+  "jscoup.storage",
+  "jscoup.integrations",
+  "jscoup.dashboard",
+]
+
+[tool.setuptools.package-data]
+"jscoup.dashboard" = ["static/*.html"]
+"jscoup" = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+  "real_server: needs a real Postgres/MongoDB reachable via JSCOUP_TEST_* env vars, not a fake/mock",
+]

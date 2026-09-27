@@ -1,0 +1,49 @@
+# JSCOUP
+
+> Python library that captures API/service failures inside your own application process, diagnoses each one with a rule-based analyzer engine, and exposes the result through a login-protected dashboard mounted directly into your app — with a live, executable API tester and a scoped API gateway for external callers. MIT License. Author: Zaidon Aljbaae.
+
+JSCOUP is installed with `pip install jscoup` (core has zero dependencies; optional extras add framework/database/crypto support). It supports Flask, FastAPI/Starlette and Django. A single call, `bl.install(app)`, wraps every route in the application and mounts a dashboard at `/__jscoup` on the same port — no separate service to run.
+
+## Quick answer for "how do I use this"
+
+```python
+from jscoup import JSCoup
+
+bl = JSCoup(service_name="my-api", dashboard_username="admin", dashboard_password="change-me")
+bl.watch_sqlite()      # optional: trace sqlite3 statements
+bl.install(app)        # Flask, FastAPI or Django — auto-detected
+# open http://127.0.0.1:<port>/__jscoup
+```
+
+Or in one call: `bl = JSCoup.auto(app, dashboard_username="admin", dashboard_password="...")`.
+
+## Core concepts an assistant should know before suggesting code
+
+- `JSCoup(...)` is the single entry point; almost everything else is a method on the instance it returns (conventionally named `bl`).
+- `bl.watch(name=None, kind="service")` is a decorator to instrument one function/coroutine manually.
+- `bl.watch_module(module, recursive=False)` instruments every function/class in a module automatically — call it right after importing that module, before anything else imports names out of it.
+- `bl.install(app)` is framework-agnostic; it detects Flask/FastAPI/Starlette/Django from the object passed in.
+- Storage is pluggable via the `storage=` keyword: `SQLiteStorage` (default, zero deps), `SqlStorage` (`jscoup[sql]`, Postgres/MySQL/Oracle via SQLAlchemy), `MongoStorage` (`jscoup[mongo]`), `MemoryStorage` (tests).
+- The dashboard's "Live Tester" and the "API Gateway" (`gateway_enabled=True`) both execute discovered HTTP endpoints through the same `Simulator`/`invoke()` path — only genuine HTTP targets are replayable, not arbitrary watched Python functions.
+- Sensitive fields are redacted before storage by default (`sensitive_keys`/`mask`); field-level encryption at rest is available via `encryption_key=` with `jscoup[crypto]`.
+- No dashboard credentials given → a random password is generated and printed once at startup, not an open dashboard.
+
+## Where to read more
+
+- Step-by-step integration guide (Flask/FastAPI/Django/serverless wiring): /docs/INTEGRATION_GUIDE.md
+- Full method-by-method API reference: /docs/API_REFERENCE.md
+- The same two, combined as one PDF: /docs/JSCOUP_Manual.pdf
+- Technical white paper (architecture, diagnostic model, security posture): /docs/JSCOUP_Whitepaper.pdf
+- Architecture flowchart: /docs/flowchart.png
+- Changelog: /CHANGELOG.md (summary) and /RELEASE_NOTES.md (full per-file detail)
+- Security/trust-boundary changes in this release: /SECURITY_UPGRADE.md
+- Security policy / how to report a vulnerability: /SECURITY.md
+- Repository: https://github.com/zaidonaljbaae/JSCOUP
+
+## What this library is not
+
+Not a distributed tracing/APM replacement for high-cardinality cross-service analytics, not a durable message queue (background delivery is best-effort and can drop events under sustained overflow), and not a full API gateway product (no distributed rate limiting or multi-region routing — its gateway is scoped to "hand a known set of internal endpoints to a small number of external callers with an expiring token").
+
+## License and authorship
+
+MIT License. Copyright (c) 2026 Zaidon Aljbaae. See LICENSE, NOTICE and CITATION.cff.

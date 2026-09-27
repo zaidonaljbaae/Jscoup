@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+.jscoup/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# The test suite is kept on the dev branch
+/tests/
+/validation/
+/TEST_RESULTS.md
+/requirements-dev.txt
