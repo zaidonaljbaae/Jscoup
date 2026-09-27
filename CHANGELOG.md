@@ -4,6 +4,11 @@ All notable changes to this project are documented here, in the style of [Keep a
 
 For full per-file, per-defect detail (including internal build history: 2.2.0 → 2.3.0rc1 → 2.3.0 → 2.3.1rc1), see [RELEASE_NOTES.md](RELEASE_NOTES.md) and [SECURITY_UPGRADE.md](SECURITY_UPGRADE.md).
 
+## [Unreleased]
+
+### Changed
+- `tests/tools/concurrent_boot.py` (the multi-worker boot-race check) now reports every worker's stage (imported, barrier passed, constructed, used), reads results with a timeout instead of the unreliable `Queue.empty()`, prints a full traceback for a worker that raises, dumps every thread's stack for a worker still running after 75 s, and names a missing worker with its last stage and exit code instead of only a bare `N/8 workers reported back` count. The CI job now has a 10-minute limit. Test-tooling only; no change to the published package.
+
 ## [1.0.0] — 2026-09-26
 
 First stable, public release. Built directly on the 2.3.1rc1 security/architecture candidate, promoted to final after a full pass of its own test suite (549 passed, 5 skipped, 0 failed) and real-world integration against two independent applications.
