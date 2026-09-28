@@ -1,7 +1,7 @@
 name: Deploy documentation site
 
 # Publishes the docs/ folder as a website:
-#   https://zaidonaljbaae.github.io/JSCOUP/
+#   https://zaidonaljbaae.github.io/Jscoup/
 # One-time setup: repository Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
 on:
   push:
