@@ -10,11 +10,11 @@
 
 **Capture API bugs, explain them, and re-run them — from one local URL.**
 
-[![How JSCoup works](docs/assets/how-it-works.gif)](https://zaidonaljbaae.github.io/JSCOUP/)
+[![How JSCoup works](docs/assets/how-it-works.gif)](https://zaidonaljbaae.github.io/Jscoup/)
 
 ▶ [Watch the 38-second video](docs/assets/how-it-works.mp4)
 
-**Work paper with diagrams: <https://zaidonaljbaae.github.io/JSCOUP/>**
+**Work paper with diagrams: <https://zaidonaljbaae.github.io/Jscoup/>**
 
 JSCoup wraps your endpoints, services and background handlers the way
 `try/except` does, but instead of a bare traceback it records the *whole* failing
@@ -47,7 +47,7 @@ bl.install(app)           # Flask, FastAPI or Django
 
 | | |
 |---|---|
-| 🌐 [**Work paper (web)**](https://zaidonaljbaae.github.io/JSCOUP/) | The whole library explained with diagrams: architecture, diagnosis, gateway, security |
+| 🌐 [**Work paper (web)**](https://zaidonaljbaae.github.io/Jscoup/) | The whole library explained with diagrams: architecture, diagnosis, gateway, security |
 | 📘 [**Integration Guide**](docs/INTEGRATION_GUIDE.md) | How to embed JSCoup into an existing Flask / FastAPI / Django project, step by step |
 | 📗 [**API Reference**](docs/API_REFERENCE.md) | Every public class and method, with signatures and descriptions |
 | 📄 [User Manual (PDF)](docs/JSCOUP_Manual.pdf) | The Integration Guide + API Reference + config reference, as one printable document |
