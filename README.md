@@ -4,7 +4,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/jscoup.svg)](https://pypi.org/project/jscoup/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Status: beta.** JSCoup **1.0.0** is the first version. The full test suite and the validation plan are kept on the [`dev` branch](https://github.com/zaidonaljbaae/JSCOUP/tree/dev).
+> **Status: alpha.** JSCoup **1.0.0** is the first version. The full test suite and the validation plan are kept on the [`dev` branch](https://github.com/zaidonaljbaae/JSCOUP/tree/dev).
 
 **Capture API bugs, explain them, and re-run them — from one local URL.**
 

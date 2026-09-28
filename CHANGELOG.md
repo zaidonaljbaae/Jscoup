@@ -19,7 +19,7 @@ First stable, public release. Built directly on the 2.3.1rc1 security/architectu
 
 ### Changed
 - Version scheme reset to a clean public `1.0.0` (previously tracked internally as `2.3.1rc1`) — the same code base, plus version metadata, packaging polish and the fixes listed under "Fixed" below.
-- `pyproject.toml` classifiers extended (Python 3.9-3.12, Flask/FastAPI/Django frameworks, project URLs); development status `4 - Beta` for the first public release.
+- `pyproject.toml` classifiers extended (Python 3.9-3.12, Flask/FastAPI/Django frameworks, project URLs); development status `3 - Alpha` for the first public release.
 
 ### Removed
 - The Arabic README (`README.ar.md`) and its link.
